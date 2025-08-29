@@ -1,8 +1,53 @@
-####################################
-###################### BindCraft Run
-####################################
-### Import dependencies
-from functions import *
+import argparse
+import os
+import time
+import numpy as np
+import pandas as pd
+try:
+    import pyrosetta as pr
+except ImportError:
+    pr = None
+import shutil
+import gc
+
+from functions.generic_utils import (
+    check_jax_gpu,
+    perform_input_check,
+    load_json_settings,
+    load_af2_models,
+    perform_advanced_settings_check,
+    generate_directories,
+    generate_dataframe_labels,
+    create_dataframe,
+    generate_filter_pass_csv,
+    check_accepted_designs,
+    check_n_trajectories,
+    load_helicity,
+    insert_data,
+    calculate_averages,
+    check_filters,
+    save_fasta,
+)
+from functions.colabdesign_utils import (
+    binder_hallucination,
+    mpnn_gen_sequence,
+    predict_binder_complex,
+    predict_binder_alone,
+    clear_mem,
+    mk_afdesign_model,
+)
+from functions.biopython_utils import (
+    validate_design_sequence,
+    target_pdb_rmsd,
+    calculate_clash_score,
+    calc_ss_percentage,
+    score_interface,
+)
+from functions.open_source_utils import (
+    unaligned_rmsd,
+    openmm_relax as pr_relax,
+)
+from colabdesign.shared.utils import copy_dict
 
 # Check if JAX-capable GPU is available, otherwise exit
 check_jax_gpu()
@@ -57,7 +102,8 @@ generate_filter_pass_csv(failure_csv, args.filters)
 ####################################
 ####################################
 ### initialise PyRosetta
-pr.init(f'-ignore_unrecognized_res -ignore_zero_occupancy -mute all -holes:dalphaball {advanced_settings["dalphaball_path"]} -corrections::beta_nov16 true -relax:default_repeats 1')
+if pr:
+    pr.init(f'-ignore_unrecognized_res -ignore_zero_occupancy -mute all -holes:dalphaball {advanced_settings["dalphaball_path"]} -corrections::beta_nov16 true -relax:default_repeats 1')
 print(f"Running binder design for target {settings_file}")
 print(f"Design settings used: {advanced_file}")
 print(f"Filtering designs based on {filters_file}")
@@ -375,7 +421,7 @@ while True:
 
                         # run design data against filter thresholds
                         filter_conditions = check_filters(mpnn_data, design_labels, filters)
-                        if filter_conditions == True:
+                        if filter_conditions:
                             print(mpnn_design_name+" passed all filters")
                             accepted_mpnn += 1
                             accepted_designs += 1

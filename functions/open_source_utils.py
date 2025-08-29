@@ -24,32 +24,37 @@ def openmm_relax(pdb_file, relaxed_pdb_path):
         original_structure = parsePDB(pdb_file)
 
         # Setup ForceField
-        forcefield = ForceField('amber14-all.xml', 'amber14/tip3pfb.xml')
+        forcefield = ForceField("amber14-all.xml", "amber14/tip3pfb.xml")
 
         # Create system
-        system = forcefield.createSystem(pdb.topology,
-                                       nonbondedMethod=NoCutoff,
-                                       constraints=HBonds)
+        system = forcefield.createSystem(
+            pdb.topology, nonbondedMethod=NoCutoff, constraints=HBonds
+        )
 
         # Add position restraints to heavy atoms
-        restraint = CustomExternalForce('k*((x-x0)^2+(y-y0)^2+(z-z0)^2)')
-        restraint.addPerParticleParameter('k')
-        restraint.addPerParticleParameter('x0')
-        restraint.addPerParticleParameter('y0')
-        restraint.addPerParticleParameter('z0')
+        restraint = CustomExternalForce("k*((x-x0)^2+(y-y0)^2+(z-z0)^2)")
+        restraint.addPerParticleParameter("k")
+        restraint.addPerParticleParameter("x0")
+        restraint.addPerParticleParameter("y0")
+        restraint.addPerParticleParameter("z0")
         system.addForce(restraint)
         for atom in pdb.topology.atoms():
-            if atom.element.symbol != 'H':
+            if atom.element.symbol != "H":
                 pos = pdb.positions[atom.index]
                 restraint.addParticle(
                     atom.index,
-                    [10.0*unit.kilocalories_per_mole/unit.angstrom**2,
-                     pos[0], pos[1], pos[2]])
+                    [
+                        10.0 * unit.kilocalories_per_mole / unit.angstrom**2,
+                        pos[0],
+                        pos[1],
+                        pos[2],
+                    ],
+                )
 
         # Create integrator
-        integrator = LangevinIntegrator(300*unit.kelvin,
-                                      1/unit.picosecond,
-                                      0.002*unit.picoseconds)
+        integrator = LangevinIntegrator(
+            300 * unit.kelvin, 1 / unit.picosecond, 0.002 * unit.picoseconds
+        )
 
         # Create simulation
         simulation = Simulation(pdb.topology, system, integrator)
@@ -64,8 +69,7 @@ def openmm_relax(pdb_file, relaxed_pdb_path):
 
         # Create a ProDy object for the relaxed structure
         relaxed_structure = original_structure.copy()
-        relaxed_structure.setCoords(
-            relaxed_positions.value_in_unit(unit.angstrom))
+        relaxed_structure.setCoords(relaxed_positions.value_in_unit(unit.angstrom))
 
         # Align relaxed structure to original
         superpose(relaxed_structure, original_structure)
@@ -129,61 +133,64 @@ def score_interface(pdb_file, binder_chain="B"):
     target_chain = "A"  # Assuming target is always chain A
 
     # --- Interface Residues and Hydrophobicity (ProDy) ---
-    sele_str = (f'(chain {target_chain} and within 5 of chain {binder_chain})'
-                f' or (chain {binder_chain} and within 5 of'
-                f' chain {target_chain})')
+    sele_str = (
+        f"(chain {target_chain} and within 5 of chain {binder_chain})"
+        f" or (chain {binder_chain} and within 5 of"
+        f" chain {target_chain})"
+    )
     interface_res_sel = structure.select(sele_str)
     if interface_res_sel is None:
         interface_nres = 0
         interface_residues_pdb_ids_str = ""
         interface_hydrophobicity = 0
-        interface_AA = {aa: 0 for aa in 'ACDEFGHIKLMNPQRSTVWY'}
+        interface_aa = {aa: 0 for aa in "ACDEFGHIKLMNPQRSTVWY"}
     else:
-        interface_residues = interface_res_sel.getHierView().getResidues()
-        interface_nres = len(set(res.getResnum() for res in interface_residues
-                               if res.getChid() == binder_chain))
+        interface_residues = interface_res_sel.getHierView().iterResidues()
+        interface_nres = len(
+            set(res.getResnum() for res in interface_residues if res.getChid() == binder_chain)
+        )
 
-        interface_residues_pdb_ids = [f"{res.getChid()}{res.getResnum()}"
-                                      for res in interface_residues]
-        interface_residues_pdb_ids_str = ','.join(interface_residues_pdb_ids)
+        interface_residues_pdb_ids = [
+            f"{res.getChid()}{res.getResnum()}" for res in interface_residues
+        ]
+        interface_residues_pdb_ids_str = ",".join(interface_residues_pdb_ids)
 
-        hydrophobic_aa = set('ACFILMPVWY')
+        hydrophobic_aa = set("ACFILMPVWY")
         hydrophobic_count = 0
-        interface_AA = {aa: 0 for aa in 'ACDEFGHIKLMNPQRSTVWY'}
+        interface_aa = {aa: 0 for aa in "ACDEFGHIKLMNPQRSTVWY"}
         for res in interface_residues:
             if res.getChid() == binder_chain:
                 resname = res.getResname()
-                if resname in interface_AA:
-                    interface_AA[resname] += 1
+                if resname in interface_aa:
+                    interface_aa[resname] += 1
                 if resname in hydrophobic_aa:
                     hydrophobic_count += 1
 
         if interface_nres != 0:
-            interface_hydrophobicity = (hydrophobic_count /
-                                        interface_nres) * 100
+            interface_hydrophobicity = (hydrophobic_count / interface_nres) * 100
         else:
             interface_hydrophobicity = 0
 
     # --- Hydrogen Bonds and Interaction Energy (ProDy InSty) ---
     try:
         interactions = Interactions(structure)
-        interactions.calcProteinInteractions()
+        interactions.calcProteinInteractions(structure)
         hbonds = interactions.getHydrogenBonds(
-            selection=f'chain {target_chain}',
-            selection2=f'chain {binder_chain}')
+            selection=f"chain {target_chain}", selection2=f"chain {binder_chain}"
+        )
         interface_interface_hbonds = len(hbonds) if hbonds is not None else 0
 
         # As a proxy for dG, we can sum the energies of the hydrogen bonds
         # Note: This is a very rough approximation
         if hbonds:
             showPairEnergy(hbonds)
-            interface_dG = sum(hbond[-1] for hbond in hbonds)
+            interface_dg = sum(hbond[-1] for hbond in hbonds)
         else:
-            interface_dG = 0
+            interface_dg = 0
 
-    except Exception:
+    except Exception:  # pylint: disable=broad-except-clause
         interface_interface_hbonds = 0
-        interface_dG = 0
+        interface_dg = 0
 
     # --- SASA Calculation (BioPython) ---
     parser = PDBParser(QUIET=True)
@@ -220,19 +227,19 @@ def score_interface(pdb_file, binder_chain="B"):
     os.remove("target.pdb")
     os.remove("binder.pdb")
 
-    interface_dSASA = (target_sasa + binder_sasa) - complex_sasa
+    interface_dsasa = (target_sasa + binder_sasa) - complex_sasa
 
     if binder_sasa > 0:
-        interface_binder_fraction = (interface_dSASA / binder_sasa) * 100
+        interface_binder_fraction = (interface_dsasa / binder_sasa) * 100
     else:
         interface_binder_fraction = 0
 
     # --- Binder Score (Proxy) and Surface Hydrophobicity ---
     # As a proxy for binder_score, we calculate the total intra-chain
     # interaction energy of the binder
-    binder_only_structure = structure.select(f'chain {binder_chain}')
+    binder_only_structure = structure.select(f"chain {binder_chain}")
     binder_interactions = Interactions(binder_only_structure)
-    binder_interactions.calcProteinInteractions()
+    binder_interactions.calcProteinInteractions(binder_only_structure)
     all_binder_hbonds = binder_interactions.getHydrogenBonds()
     binder_score = 0
     if all_binder_hbonds:
@@ -245,26 +252,30 @@ def score_interface(pdb_file, binder_chain="B"):
 
     # --- Assemble results ---
     interface_scores = {
-        'binder_score': binder_score,
-        'surface_hydrophobicity': surface_hydrophobicity,
-        'interface_sc': 0,  # Not implemented
-        'interface_packstat': 0,  # Not implemented
-        'interface_dG': interface_dG,
-        'interface_dSASA': interface_dSASA,
-        'interface_dG_SASA_ratio': (interface_dG / interface_dSASA) * 100
-        if interface_dSASA != 0 else 0,
-        'interface_fraction': interface_binder_fraction,
-        'interface_hydrophobicity': interface_hydrophobicity,
-        'interface_nres': interface_nres,
-        'interface_interface_hbonds': interface_interface_hbonds,
-        'interface_hbond_percentage': (interface_interface_hbonds /
-                                       interface_nres) * 100
-        if interface_nres != 0 else 0,
-        'interface_delta_unsat_hbonds': 0,  # Not implemented
-        'interface_delta_unsat_hbonds_percentage': 0  # Not implemented
+        "binder_score": binder_score,
+        "surface_hydrophobicity": surface_hydrophobicity,
+        "interface_sc": 0,  # Not implemented
+        "interface_packstat": 0,  # Not implemented
+        "interface_dG": interface_dg,
+        "interface_dSASA": interface_dsasa,
+        "interface_dG_SASA_ratio": (interface_dg / interface_dsasa) * 100
+        if interface_dsasa != 0
+        else 0,
+        "interface_fraction": interface_binder_fraction,
+        "interface_hydrophobicity": interface_hydrophobicity,
+        "interface_nres": interface_nres,
+        "interface_interface_hbonds": interface_interface_hbonds,
+        "interface_hbond_percentage": (interface_interface_hbonds / interface_nres)
+        * 100
+        if interface_nres != 0
+        else 0,
+        "interface_delta_unsat_hbonds": 0,  # Not implemented
+        "interface_delta_unsat_hbonds_percentage": 0,  # Not implemented
     }
 
-    interface_scores = {k: round(v, 2) if isinstance(v, float) else v
-                        for k, v in interface_scores.items()}
+    interface_scores = {
+        k: round(v, 2) if isinstance(v, float) else v
+        for k, v in interface_scores.items()
+    }
 
-    return interface_scores, interface_AA, interface_residues_pdb_ids_str
+    return interface_scores, interface_aa, interface_residues_pdb_ids_str
