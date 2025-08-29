@@ -8,7 +8,6 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = ">=3.11"
 openmm = "^8.3.1"
-prody = "^2.6.1"
 pandas = "^2.3.2"
 matplotlib = "^3.10.5"
 scipy = "^1.16.1"
@@ -29,10 +28,10 @@ optax = "^0.2.5"
 jax = ">=0.4,<=0.6.0"
 jaxlib = ">=0.4,<=0.6.0"
 colabdesign = {git = "https://github.com/sokrypton/ColabDesign.git"}
-ruff = "^0.12.11"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.4.1"
+ruff = "^0.12.11"
 
 [build-system]
 requires = ["poetry-core"]
