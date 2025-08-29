@@ -7,26 +7,111 @@ import json
 import jax
 import shutil
 import zipfile
-import random
-import math
 import pandas as pd
 import numpy as np
 
 # Define labels for dataframes
 def generate_dataframe_labels():
     # labels for trajectory
-    trajectory_labels = ['Design', 'Protocol', 'Length', 'Seed', 'Helicity', 'Target_Hotspot', 'Sequence', 'InterfaceResidues', 'pLDDT', 'pTM', 'i_pTM', 'pAE', 'i_pAE', 'i_pLDDT', 'ss_pLDDT', 'Unrelaxed_Clashes',
-                        'Relaxed_Clashes', 'Binder_Energy_Score', 'Surface_Hydrophobicity', 'ShapeComplementarity', 'PackStat', 'dG', 'dSASA', 'dG/dSASA', 'Interface_SASA_%', 'Interface_Hydrophobicity', 'n_InterfaceResidues',
-                        'n_InterfaceHbonds', 'InterfaceHbondsPercentage', 'n_InterfaceUnsatHbonds', 'InterfaceUnsatHbondsPercentage', 'Interface_Helix%', 'Interface_BetaSheet%', 'Interface_Loop%',
-                        'Binder_Helix%', 'Binder_BetaSheet%', 'Binder_Loop%', 'InterfaceAAs', 'Target_RMSD', 'TrajectoryTime', 'Notes', 'TargetSettings', 'Filters', 'AdvancedSettings']
+    trajectory_labels = [
+        "Design",
+        "Protocol",
+        "Length",
+        "Seed",
+        "Helicity",
+        "Target_Hotspot",
+        "Sequence",
+        "InterfaceResidues",
+        "pLDDT",
+        "pTM",
+        "i_pTM",
+        "pAE",
+        "i_pAE",
+        "i_pLDDT",
+        "ss_pLDDT",
+        "Unrelaxed_Clashes",
+        "Relaxed_Clashes",
+        "Binder_Energy_Score",
+        "Surface_Hydrophobicity",
+        "ShapeComplementarity",
+        "PackStat",
+        "dG",
+        "dSASA",
+        "dG/dSASA",
+        "Interface_SASA_%",
+        "Interface_Hydrophobicity",
+        "n_InterfaceResidues",
+        "n_InterfaceHbonds",
+        "InterfaceHbondsPercentage",
+        "n_InterfaceUnsatHbonds",
+        "InterfaceUnsatHbondsPercentage",
+        "Interface_Helix%",
+        "Interface_BetaSheet%",
+        "Interface_Loop%",
+        "Binder_Helix%",
+        "Binder_BetaSheet%",
+        "Binder_Loop%",
+        "InterfaceAAs",
+        "Target_RMSD",
+        "TrajectoryTime",
+        "Notes",
+        "TargetSettings",
+        "Filters",
+        "AdvancedSettings",
+    ]
 
     # labels for mpnn designs
-    core_labels = ['pLDDT', 'pTM', 'i_pTM', 'pAE', 'i_pAE', 'i_pLDDT', 'ss_pLDDT', 'Unrelaxed_Clashes', 'Relaxed_Clashes', 'Binder_Energy_Score', 'Surface_Hydrophobicity',
-                    'ShapeComplementarity', 'PackStat', 'dG', 'dSASA', 'dG/dSASA', 'Interface_SASA_%', 'Interface_Hydrophobicity', 'n_InterfaceResidues', 'n_InterfaceHbonds', 'InterfaceHbondsPercentage',
-                    'n_InterfaceUnsatHbonds', 'InterfaceUnsatHbondsPercentage', 'Interface_Helix%', 'Interface_BetaSheet%', 'Interface_Loop%', 'Binder_Helix%', 
-                    'Binder_BetaSheet%', 'Binder_Loop%', 'InterfaceAAs', 'Hotspot_RMSD', 'Target_RMSD', 'Binder_pLDDT', 'Binder_pTM', 'Binder_pAE', 'Binder_RMSD']
+    core_labels = [
+        "pLDDT",
+        "pTM",
+        "i_pTM",
+        "pAE",
+        "i_pAE",
+        "i_pLDDT",
+        "ss_pLDDT",
+        "Unrelaxed_Clashes",
+        "Relaxed_Clashes",
+        "Binder_Energy_Score",
+        "Surface_Hydrophobicity",
+        "ShapeComplementarity",
+        "PackStat",
+        "dG",
+        "dSASA",
+        "dG/dSASA",
+        "Interface_SASA_%",
+        "Interface_Hydrophobicity",
+        "n_InterfaceResidues",
+        "n_InterfaceHbonds",
+        "InterfaceHbondsPercentage",
+        "n_InterfaceUnsatHbonds",
+        "InterfaceUnsatHbondsPercentage",
+        "Interface_Helix%",
+        "Interface_BetaSheet%",
+        "Interface_Loop%",
+        "Binder_Helix%",
+        "Binder_BetaSheet%",
+        "Binder_Loop%",
+        "InterfaceAAs",
+        "Hotspot_RMSD",
+        "Target_RMSD",
+        "Binder_pLDDT",
+        "Binder_pTM",
+        "Binder_pAE",
+        "Binder_RMSD",
+    ]
 
-    design_labels = ['Design', 'Protocol', 'Length', 'Seed', 'Helicity', 'Target_Hotspot', 'Sequence', 'InterfaceResidues', 'MPNN_score', 'MPNN_seq_recovery']
+    design_labels = [
+        "Design",
+        "Protocol",
+        "Length",
+        "Seed",
+        "Helicity",
+        "Target_Hotspot",
+        "Sequence",
+        "InterfaceResidues",
+        "MPNN_score",
+        "MPNN_seq_recovery",
+    ]
 
     for label in core_labels:
         design_labels += ['Average_' + label] + [f'{i}_{label}' for i in range(1, 6)]
@@ -39,9 +124,25 @@ def generate_dataframe_labels():
 
 # Create base directions of the project
 def generate_directories(design_path):
-    design_path_names = ["Accepted", "Accepted/Ranked", "Accepted/Animation", "Accepted/Plots", "Accepted/Pickle", "Trajectory",
-                        "Trajectory/Relaxed", "Trajectory/Plots", "Trajectory/Clashing", "Trajectory/LowConfidence", "Trajectory/Animation",
-                        "Trajectory/Pickle", "MPNN", "MPNN/Binder", "MPNN/Sequences", "MPNN/Relaxed", "Rejected"]
+    design_path_names = [
+        "Accepted",
+        "Accepted/Ranked",
+        "Accepted/Animation",
+        "Accepted/Plots",
+        "Accepted/Pickle",
+        "Trajectory",
+        "Trajectory/Relaxed",
+        "Trajectory/Plots",
+        "Trajectory/Clashing",
+        "Trajectory/LowConfidence",
+        "Trajectory/Animation",
+        "Trajectory/Pickle",
+        "MPNN",
+        "MPNN/Binder",
+        "MPNN/Sequences",
+        "MPNN/Relaxed",
+        "Rejected",
+    ]
     design_paths = {}
 
     # make directories and set design_paths[FOLDER_NAME] variable
@@ -55,12 +156,20 @@ def generate_directories(design_path):
 # generate CSV file for tracking designs not passing filters
 def generate_filter_pass_csv(failure_csv, filter_json):
     if not os.path.exists(failure_csv):
-        with open(filter_json, 'r') as file:
+        with open(filter_json, "r", encoding="utf-8") as file:
             data = json.load(file)
-        
+
         # Create a list of modified keys
-        names = ['Trajectory_logits_pLDDT', 'Trajectory_softmax_pLDDT', 'Trajectory_one-hot_pLDDT', 'Trajectory_final_pLDDT', 'Trajectory_Contacts', 'Trajectory_Clashes', 'Trajectory_WrongHotspot']
-        special_prefixes = ('Average_', '1_', '2_', '3_', '4_', '5_')
+        names = [
+            "Trajectory_logits_pLDDT",
+            "Trajectory_softmax_pLDDT",
+            "Trajectory_one-hot_pLDDT",
+            "Trajectory_final_pLDDT",
+            "Trajectory_Contacts",
+            "Trajectory_Clashes",
+            "Trajectory_WrongHotspot",
+        ]
+        special_prefixes = ("Average_", "1_", "2_", "3_", "4_", "5_")
         tracked_filters = set()
 
         for key in data.keys():
@@ -125,20 +234,43 @@ def update_failures(failure_csv, failure_column_or_dict):
 
 # Check if number of trajectories generated
 def check_n_trajectories(design_paths, advanced_settings):
-    n_trajectories = [f for f in os.listdir(design_paths["Trajectory/Relaxed"]) if f.endswith('.pdb') and not f.startswith('.')]
+    n_trajectories = [
+        f
+        for f in os.listdir(design_paths["Trajectory/Relaxed"])
+        if f.endswith(".pdb") and not f.startswith(".")
+    ]
 
-    if advanced_settings["max_trajectories"] is not False and len(n_trajectories) >= advanced_settings["max_trajectories"]:
-        print(f"Target number of {str(len(n_trajectories))} trajectories reached, stopping execution...")
+    if (
+        advanced_settings["max_trajectories"] is not False
+        and len(n_trajectories) >= advanced_settings["max_trajectories"]
+    ):
+        print(
+            f"Target number of {str(len(n_trajectories))} trajectories reached, stopping execution..."
+        )
         return True
-    else:
-        return False
+    return False
+
 
 # Check if we have required number of accepted targets, rank them, and analyse sequence and structure properties
-def check_accepted_designs(design_paths, mpnn_csv, final_labels, final_csv, advanced_settings, target_settings, design_labels):
-    accepted_binders = [f for f in os.listdir(design_paths["Accepted"]) if f.endswith('.pdb') and not f.startswith('.')]
+def check_accepted_designs(
+    design_paths,
+    mpnn_csv,
+    final_labels,
+    final_csv,
+    advanced_settings,
+    target_settings,
+    design_labels,
+):
+    accepted_binders = [
+        f
+        for f in os.listdir(design_paths["Accepted"])
+        if f.endswith(".pdb") and not f.startswith(".")
+    ]
 
     if len(accepted_binders) >= target_settings["number_of_final_designs"]:
-        print(f"Target number {str(len(accepted_binders))} of designs reached! Reranking...")
+        print(
+            f"Target number {str(len(accepted_binders))} of designs reached! Reranking..."
+        )
 
         # clear the Ranked folder in case we added new designs in the meantime so we rerank them all
         for f in os.listdir(design_paths["Accepted/Ranked"]):
@@ -146,8 +278,8 @@ def check_accepted_designs(design_paths, mpnn_csv, final_labels, final_csv, adva
 
         # load dataframe of designed binders
         design_df = pd.read_csv(mpnn_csv)
-        design_df = design_df.sort_values('Average_i_pTM', ascending=False)
-        
+        design_df = design_df.sort_values("Average_i_pTM", ascending=False)
+
         # create final csv dataframe to copy matched rows, initialize with the column labels
         final_df = pd.DataFrame(columns=final_labels)
 
@@ -155,13 +287,18 @@ def check_accepted_designs(design_paths, mpnn_csv, final_labels, final_csv, adva
         rank = 1
         for _, row in design_df.iterrows():
             for binder in accepted_binders:
-                target_settings["binder_name"], model = binder.rsplit('_model', 1)
-                if target_settings["binder_name"] == row['Design']:
+                target_settings["binder_name"], model = binder.rsplit("_model", 1)
+                if target_settings["binder_name"] == row["Design"]:
                     # rank and copy into ranked folder
-                    row_data = {'Rank': rank, **{label: row[label] for label in design_labels}}
-                    final_df = pd.concat([final_df, pd.DataFrame([row_data])], ignore_index=True)
+                    row_data = {"Rank": rank, **{label: row[label] for label in design_labels}}
+                    final_df = pd.concat(
+                        [final_df, pd.DataFrame([row_data])], ignore_index=True
+                    )
                     old_path = os.path.join(design_paths["Accepted"], binder)
-                    new_path = os.path.join(design_paths["Accepted/Ranked"], f"{rank}_{target_settings['binder_name']}_model{model.rsplit('.', 1)[0]}.pdb")
+                    new_path = os.path.join(
+                        design_paths["Accepted/Ranked"],
+                        f"{rank}_{target_settings['binder_name']}_model{model.rsplit('.', 1)[0]}.pdb",
+                    )
                     shutil.copyfile(old_path, new_path)
 
                     rank += 1
@@ -199,15 +336,16 @@ def load_helicity(advanced_settings):
 def check_jax_gpu():
     devices = jax.devices()
 
-    has_gpu = any(device.platform == 'gpu' for device in devices)
+    has_gpu = any(device.platform == "gpu" for device in devices)
 
     if not has_gpu:
         print("No GPU device found, terminating.")
         exit()
-    else:
-        print("Available GPUs:")
-        for i, device in enumerate(devices):
-            print(f"{device.device_kind}{i + 1}: {device.platform}")
+
+    print("Available GPUs:")
+    for i, device in enumerate(devices):
+        print(f"{device.device_kind}{i + 1}: {device.platform}")
+
 
 # check all input files being passed
 def perform_input_check(args):
@@ -221,49 +359,58 @@ def perform_input_check(args):
 
     # Set default filters.json path if not provided
     if not args.filters:
-        args.filters = os.path.join(binder_script_path, 'settings_filters', 'default_filters.json')
+        args.filters = os.path.join(
+            binder_script_path, "settings_filters", "default_filters.json"
+        )
 
     # Set a random advanced json settings file if not provided
     if not args.advanced:
-        args.advanced = os.path.join(binder_script_path, 'settings_advanced', 'default_4stage_multimer.json')
+        args.advanced = os.path.join(
+            binder_script_path, "settings_advanced", "default_4stage_multimer.json"
+        )
 
     return args.settings, args.filters, args.advanced
+
 
 # check specific advanced settings
 def perform_advanced_settings_check(advanced_settings, bindcraft_folder):
     # set paths to model weights and executables
     if bindcraft_folder == "colab":
-        advanced_settings["af_params_dir"] = '/content/bindcraft/params/'
-        advanced_settings["dssp_path"] = '/content/bindcraft/functions/dssp'
-        advanced_settings["dalphaball_path"] = '/content/bindcraft/functions/DAlphaBall.gcc'
+        advanced_settings["af_params_dir"] = "/content/bindcraft/params/"
+        advanced_settings["dssp_path"] = "/content/bindcraft/functions/dssp"
+        advanced_settings["dalphaball_path"] = "/content/bindcraft/functions/DAlphaBall.gcc"
     else:
         # Set paths individually if they are not already set
         if not advanced_settings["af_params_dir"]:
             advanced_settings["af_params_dir"] = bindcraft_folder
         if not advanced_settings["dssp_path"]:
-            advanced_settings["dssp_path"] = os.path.join(bindcraft_folder, 'functions', 'dssp')
+            advanced_settings["dssp_path"] = os.path.join(
+                bindcraft_folder, "functions", "dssp"
+            )
         if not advanced_settings["dalphaball_path"]:
-            advanced_settings["dalphaball_path"] = os.path.join(bindcraft_folder, 'functions', 'DAlphaBall.gcc')
+            advanced_settings["dalphaball_path"] = os.path.join(
+                bindcraft_folder, "functions", "DAlphaBall.gcc"
+            )
 
     # check formatting of omit_AAs setting
-        omit_aas = advanced_settings["omit_AAs"]
-    if advanced_settings["omit_AAs"] in [None, False, '']:
+    if advanced_settings["omit_AAs"] in [None, False, ""]:
         advanced_settings["omit_AAs"] = None
     elif isinstance(advanced_settings["omit_AAs"], str):
         advanced_settings["omit_AAs"] = advanced_settings["omit_AAs"].strip()
 
     return advanced_settings
 
+
 # Load settings from JSONs
 def load_json_settings(settings_json, filters_json, advanced_json):
     # load settings from json files
-    with open(settings_json, 'r') as file:
+    with open(settings_json, "r", encoding="utf-8") as file:
         target_settings = json.load(file)
 
-    with open(advanced_json, 'r') as file:
+    with open(advanced_json, "r", encoding="utf-8") as file:
         advanced_settings = json.load(file)
 
-    with open(filters_json, 'r') as file:
+    with open(filters_json, "r", encoding="utf-8") as file:
         filters = json.load(file)
 
     return target_settings, advanced_settings, filters
@@ -311,10 +458,12 @@ def clean_pdb(pdb_file):
 
 def zip_and_empty_folder(folder_path, extension):
     folder_basename = os.path.basename(folder_path)
-    zip_filename = os.path.join(os.path.dirname(folder_path), folder_basename + '.zip')
+    zip_filename = os.path.join(
+        os.path.dirname(folder_path), folder_basename + ".zip"
+    )
 
     # Open the zip file in 'a' mode to append if it exists, otherwise create a new one
-    with zipfile.ZipFile(zip_filename, 'a', zipfile.ZIP_DEFLATED) as zipf:
+    with zipfile.ZipFile(zip_filename, "a", zipfile.ZIP_DEFLATED) as zipf:
         for file in os.listdir(folder_path):
             if file.endswith(extension):
                 # Create an absolute path
@@ -370,14 +519,21 @@ def calculate_averages(statistics, handle_aa=False):
 # filter designs based on feature thresholds
 def check_filters(mpnn_data, design_labels, filters):
     # check mpnn_data against labels
-    mpnn_dict = {label: value for label, value in zip(design_labels, mpnn_data)}
+    mpnn_dict = dict(zip(design_labels, mpnn_data))
 
     unmet_conditions = []
 
     # check filters against thresholds
     for label, conditions in filters.items():
         # special conditions for interface amino acid counts
-        if label == 'Average_InterfaceAAs' or label == '1_InterfaceAAs' or label == '2_InterfaceAAs' or label == '3_InterfaceAAs' or label == '4_InterfaceAAs' or label == '5_InterfaceAAs':
+        if label in (
+            "Average_InterfaceAAs",
+            "1_InterfaceAAs",
+            "2_InterfaceAAs",
+            "3_InterfaceAAs",
+            "4_InterfaceAAs",
+            "5_InterfaceAAs",
+        ):
             for aa, aa_conditions in conditions.items():
                 if mpnn_dict.get(label) is None:
                     continue
@@ -405,6 +561,4 @@ def check_filters(mpnn_data, design_labels, filters):
     # if all filters are passed then return True
     if len(unmet_conditions) == 0:
         return True
-    # if some filters were unmet, print them out
-    else:
-        return unmet_conditions
+    return unmet_conditions
