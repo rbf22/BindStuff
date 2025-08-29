@@ -8,7 +8,7 @@ import pandas as pd
 import math, random
 import matplotlib.pyplot as plt
 
-from .pyrosetta_utils import *
+from .open_source_utils import *
 from .colabdesign_utils import *
 from .biopython_utils import *
 from .generic_utils import *
