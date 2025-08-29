@@ -1,28 +1,28 @@
-# BindCraft
-![alt text](https://github.com/martinpacesa/BindCraft/blob/main/pipeline.png?raw=true)
+# BindStuff
+![alt text](https://github.com/martinpacesa/BindStuff/blob/main/pipeline.png?raw=true)
 
 Simple binder design pipeline using AlphaFold2 backpropagation, MPNN, and PyRosetta. Select your target and let the script do the rest of the work and finish once you have enough designs to order!
 
-[Preprint link for BindCraft](https://www.biorxiv.org/content/10.1101/2024.09.30.615802)
+[Preprint link for BindStuff](https://www.biorxiv.org/content/10.1101/2024.09.30.615802)
 
-**Note: Before posting an issue, read the complete wiki <a href="https://github.com/martinpacesa/BindCraft/wiki/De-novo-binder-design-with-BindCraft">here</a>. Issues that are covered in the wiki will be closed without an answer.**
+**Note: Before posting an issue, read the complete wiki <a href="https://github.com/martinpacesa/BindStuff/wiki/De-novo-binder-design-with-BindStuff">here</a>. Issues that are covered in the wiki will be closed without an answer.**
 
 ## Installation
 First you need to clone this repository. Replace **[install_folder]** with the path where you want to install it.
 
-`git clone https://github.com/martinpacesa/BindCraft [install_folder]`
+`git clone https://github.com/martinpacesa/BindStuff [install_folder]`
 
-The navigate into your install folder using *cd* and run the installation code. BindCraft requires a CUDA-compatible Nvidia graphics card to run. In the *cuda* setting, please specify the CUDA version compatible with your graphics card, for example '11.8'. If unsure, leave blank but it's possible that the installation might select the wrong version, which will lead to errors. In *pkg_manager* specify whether you are using 'mamba' or 'conda', if left blank it will use 'conda' by default. 
+The navigate into your install folder using *cd* and run the installation code. BindStuff requires a CUDA-compatible Nvidia graphics card to run. In the *cuda* setting, please specify the CUDA version compatible with your graphics card, for example '11.8'. If unsure, leave blank but it's possible that the installation might select the wrong version, which will lead to errors. In *pkg_manager* specify whether you are using 'mamba' or 'conda', if left blank it will use 'conda' by default. 
 
 Note: This install script will install PyRosetta, which requires a license for commercial purposes. The code requires about 2 Mb of storage space, while the AlphaFold2 weights take up about 5.3 Gb.
 
-`bash install_bindcraft.sh --cuda '12.4' --pkg_manager 'conda'`
+`bash install_BindStuff.sh --cuda '12.4' --pkg_manager 'conda'`
 
 ## Google Colab
-<a href="https://colab.research.google.com/github/martinpacesa/BindCraft/blob/main/notebooks/BindCraft.ipynb">
+<a href="https://colab.research.google.com/github/martinpacesa/BindStuff/blob/main/notebooks/BindStuff.ipynb">
   <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
 </a> <br />
-We prepared a convenient google colab notebook to test the bindcraft code functionalities. However, as the pipeline requires significant amount of GPU memory to run for larger target+binder complexes, we highly recommend to run it using a local installation and at least 32 Gb of GPU memory.
+We prepared a convenient google colab notebook to test the BindStuff code functionalities. However, as the pipeline requires significant amount of GPU memory to run for larger target+binder complexes, we highly recommend to run it using a local installation and at least 32 Gb of GPU memory.
 
 **Always try to trim the input target PDB to the smallest size possible! It will significantly speed up the binder generation and minimise the GPU memory requirements.**
 
@@ -43,16 +43,16 @@ number_of_final_designs   -> how many designs that pass all filters to aim for, 
 ```
 Then run the binder design script:
 
-`sbatch ./bindcraft.slurm --settings './settings_target/PDL1.json' --filters './settings_filters/default_filters.json' --advanced './settings_advanced/default_4stage_multimer.json'`
+`sbatch ./BindStuff.slurm --settings './settings_target/PDL1.json' --filters './settings_filters/default_filters.json' --advanced './settings_advanced/default_4stage_multimer.json'`
 
 The *settings* flag should point to your target .json which you set above. The *filters* flag points to the json where the design filters are specified (default is ./filters/default_filters.json). The *advanced* flag points to your advanced settings (default is ./advanced_settings/default_4stage_multimer.json). If you leave out the filters and advanced settings flags it will automatically point to the defaults.
 
 Alternatively, if your machine does not support SLURM, you can run the code directly by activating the environment in conda and running the python code:
 
 ```
-conda activate BindCraft
-cd /path/to/bindcraft/folder/
-python -u ./bindcraft.py --settings './settings_target/PDL1.json' --filters './settings_filters/default_filters.json' --advanced './settings_advanced/default_4stage_multimer.json'
+conda activate BindStuff
+cd /path/to/BindStuff/folder/
+python -u ./BindStuff.py --settings './settings_target/PDL1.json' --filters './settings_filters/default_filters.json' --advanced './settings_advanced/default_4stage_multimer.json'
 ```
 
 **We recommend to generate at least a 100 final designs passing all filters, then order the top 5-20 for experimental characterisation.** If high affinity binders are required, it is better to screen more, as the ipTM metric used for ranking is not a good predictor for affinity, but has been shown to be a good binary predictor of binding. 
