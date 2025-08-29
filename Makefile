@@ -2,7 +2,6 @@
 
 dev-install:
 	sudo apt update
-	sudo apt install -y graphviz
 	poetry install
 	chmod +x functions/dssp
 	chmod +x functions/DAlphaBall.gcc

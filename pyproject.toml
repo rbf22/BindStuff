@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "bindcraft"
+name = "bindstuff"
 version = "0.1.0"
 description = "Protein binder design pipeline"
 authors = ["No author specified"]
@@ -29,6 +29,7 @@ optax = "^0.2.5"
 jax = ">=0.4,<=0.6.0"
 jaxlib = ">=0.4,<=0.6.0"
 colabdesign = {git = "https://github.com/sokrypton/ColabDesign.git"}
+ruff = "^0.12.11"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.4.1"
