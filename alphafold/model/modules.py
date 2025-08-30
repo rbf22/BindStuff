@@ -372,9 +372,10 @@ class AlphaFold(hk.Module):
         # Eval mode or tests: use the maximum number of iterations.
         num_iter = self.config.num_recycle
 
-      body = lambda x: (x[0] + 1,  # pylint: disable=g-long-lambda
-                        get_prev(do_call(x[1], recycle_idx=x[0],
-                                         compute_loss=False)))
+      def body(x):
+        return (x[0] + 1,
+                get_prev(do_call(x[1], recycle_idx=x[0],
+                                 compute_loss=False)))
       if hk.running_init():
         # When initializing the Haiku module, run one iteration of the
         # while_loop to initialize the Haiku modules used in `body`.

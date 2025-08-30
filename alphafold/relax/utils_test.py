@@ -38,8 +38,8 @@ class UtilsTest(absltest.TestCase):
     output_pdb = utils.overwrite_b_factors(test_pdb, bfactors)
 
     # Check that the atom lines are unchanged apart from the B-factors.
-    atom_lines_original = [l for l in test_pdb.split('\n') if l[:4] == ('ATOM')]
-    atom_lines_new = [l for l in output_pdb.split('\n') if l[:4] == ('ATOM')]
+    atom_lines_original = [line for line in test_pdb.split('\n') if line[:4] == ('ATOM')]
+    atom_lines_new = [line for line in output_pdb.split('\n') if line[:4] == ('ATOM')]
     for line_original, line_new in zip(atom_lines_original, atom_lines_new):
       self.assertEqual(line_original[:60].strip(), line_new[:60].strip())
       self.assertEqual(line_original[66:].strip(), line_new[66:].strip())

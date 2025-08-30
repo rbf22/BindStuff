@@ -27,7 +27,8 @@ np.set_printoptions(precision=3, suppress=True)
 r2t = quat_affine.rot_list_to_tensor
 v2t = quat_affine.vec_list_to_tensor
 
-q2r = lambda q: r2t(quat_affine.quat_to_rot(q))
+def q2r(q):
+  return r2t(quat_affine.quat_to_rot(q))
 
 
 class QuatAffineTest(absltest.TestCase):

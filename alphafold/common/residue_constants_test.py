@@ -59,7 +59,8 @@ class ResidueConstantsTest(parameterized.TestCase):
       self.assertEqual(residue_constants.STANDARD_ATOM_MASK.shape, (21, 37,))
 
     with self.subTest('Check values'):
-      str_to_row = lambda s: [c == '1' for c in s]  # More clear/concise.
+      def str_to_row(s):
+        return [c == '1' for c in s]
       np.testing.assert_array_equal(
           residue_constants.STANDARD_ATOM_MASK,
           np.array([

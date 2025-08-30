@@ -262,7 +262,8 @@ class InvariantPointAttention(hk.Module):
     point_weights = np.sqrt(1.0 / point_variance)
 
     # This is equivalent to jax.nn.softplus, but avoids a bug in the test...
-    softplus = lambda x: jnp.logaddexp(x, jnp.zeros_like(x))
+    def softplus(x):
+      return jnp.logaddexp(x, jnp.zeros_like(x))
     raw_point_weights = hk.get_parameter(
         'trainable_point_weights',
         shape=[num_head],

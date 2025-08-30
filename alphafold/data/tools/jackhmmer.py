@@ -183,8 +183,10 @@ class Jackhmmer:
       return single_chunk_results
 
     db_basename = os.path.basename(self.database_path)
-    db_remote_chunk = lambda db_idx: f'{self.database_path}.{db_idx}'
-    db_local_chunk = lambda db_idx: f'/tmp/ramdisk/{db_basename}.{db_idx}'
+    def db_remote_chunk(db_idx):
+      return f'{self.database_path}.{db_idx}'
+    def db_local_chunk(db_idx):
+      return f'/tmp/ramdisk/{db_basename}.{db_idx}'
 
     # Remove existing files to prevent OOM
     for f in glob.glob(db_local_chunk('[0-9]*')):

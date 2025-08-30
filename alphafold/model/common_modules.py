@@ -101,8 +101,6 @@ class Linear(hk.Module):
       output of shape [...] + num_output.
     """
 
-    num_input_dims = self.num_input_dims
-
     if self.num_input_dims > 0:
       in_shape = inputs.shape[-self.num_input_dims:]
     else:
