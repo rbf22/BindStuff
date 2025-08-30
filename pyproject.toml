@@ -39,7 +39,12 @@ module = [
     "openmm.*",
     "Bio.*", 
     "prody.*",
-    "colabdesign.*"
+    "colabdesign.*",
+    "numpy.*",
+    "jax.*",
+    "matplotlib.*",
+    "scipy.*",
+    "pandas.*"
 ]
 ignore_missing_imports = true
 
