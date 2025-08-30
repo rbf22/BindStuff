@@ -56,7 +56,9 @@ def _add_restraints(
 
   force = openmm.CustomExternalForce(
       "0.5 * k * ((x-x0)^2 + (y-y0)^2 + (z-z0)^2)")
-  force.addGlobalParameter("k", stiffness)
+  k = stiffness.value_in_unit(
+      unit.kilojoule_per_mole / (unit.nanometer**2))
+  force.addGlobalParameter("k", k)
   for p in ["x0", "y0", "z0"]:
     force.addPerParticleParameter(p)
 
@@ -64,7 +66,8 @@ def _add_restraints(
     if atom.residue.index in exclude_residues:
       continue
     if will_restrain(atom, rset):
-      force.addParticle(i, reference_pdb.positions[i])
+      pos_in_nm = reference_pdb.positions[i].value_in_unit(unit.nanometer)
+      force.addParticle(i, pos_in_nm)
   logging.info("Restraining %d / %d particles.",
                force.getNumParticles(), system.getNumParticles())
   system.addForce(force)
@@ -100,8 +103,7 @@ def _openmm_minimize(
   state = simulation.context.getState(getEnergy=True, getPositions=True)
   ret["einit"] = state.getPotentialEnergy().value_in_unit(ENERGY)
   ret["posinit"] = state.getPositions(asNumpy=True).value_in_unit(LENGTH)
-  simulation.minimizeEnergy(maxIterations=max_iterations,
-                            tolerance=tolerance)
+  simulation.minimizeEnergy(maxIterations=max_iterations)
   state = simulation.context.getState(getEnergy=True, getPositions=True)
   ret["efinal"] = state.getPotentialEnergy().value_in_unit(ENERGY)
   ret["pos"] = state.getPositions(asNumpy=True).value_in_unit(LENGTH)
@@ -399,8 +401,8 @@ def _run_one_iteration(
   exclude_residues = exclude_residues or []
 
   # Assign physical dimensions.
-  tolerance = (tolerance * ENERGY).in_units_of(unit.kilojoule_per_mole)
-  stiffness = (stiffness * ENERGY / LENGTH**2).in_units_of(unit.kilojoule_per_mole / unit.nanometer**2)
+  tolerance = tolerance * ENERGY
+  stiffness = stiffness * ENERGY / (LENGTH**2)
 
   start = time.time()
   attempts = 0
