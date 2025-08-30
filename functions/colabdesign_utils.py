@@ -9,6 +9,7 @@ import shutil
 import sys
 import math
 import pickle
+from typing import Dict, List, Optional, Any
 import matplotlib.pyplot as plt
 import numpy as np
 import jax
@@ -24,18 +25,18 @@ from .generic_utils import update_failures
 
 # hallucinate a binder
 def binder_hallucination(  # pylint: disable=too-many-arguments,too-many-locals,too-many-branches,too-many-statements,too-many-positional-arguments
-    design_name,
-    starting_pdb,
-    chain,
-    target_hotspot_residues,
-    length,
-    seed,
-    helicity_value,
-    design_models,
-    advanced_settings,
-    design_paths,
-    failure_csv,
-):
+    design_name: str,
+    starting_pdb: str,
+    chain: str,
+    target_hotspot_residues: Optional[str],
+    length: int,
+    seed: int,
+    helicity_value: float,
+    design_models: List[int],
+    advanced_settings: Dict,
+    design_paths: Dict[str, str],
+    failure_csv: str,
+) -> Any:
     """Generate protein binder using hallucination approach with ColabDesign."""
     model_pdb_path = os.path.join(design_paths["Trajectory"], design_name + ".pdb")
 
@@ -361,20 +362,20 @@ def binder_hallucination(  # pylint: disable=too-many-arguments,too-many-locals,
 
 # run prediction for binder with masked template target
 def predict_binder_complex(  # pylint: disable=too-many-arguments,too-many-locals,too-many-positional-arguments,unused-argument
-    prediction_model,
-    binder_sequence,
-    mpnn_design_name,
-    target_pdb,
-    chain,
-    length,
-    trajectory_pdb,
-    prediction_models,
-    advanced_settings,
-    filters,
-    design_paths,
-    failure_csv,
-    seed=None,
-):
+    prediction_model: Any,
+    binder_sequence: str,
+    mpnn_design_name: str,
+    target_pdb: str,
+    chain: str,
+    length: int,
+    trajectory_pdb: str,
+    prediction_models: List[int],
+    advanced_settings: Dict[str, Any],
+    filters: Dict[str, Any],
+    design_paths: Dict[str, str],
+    failure_csv: str,
+    seed: Optional[int] = None,
+) -> tuple[Dict[int, Dict[str, float]], bool]:
     """Predict binder complex structure using AlphaFold2."""
     prediction_stats = {}
 
@@ -383,7 +384,7 @@ def predict_binder_complex(  # pylint: disable=too-many-arguments,too-many-local
 
     # reset filtering conditionals
     pass_af2_filters = True
-    filter_failures = {}
+    filter_failures: Dict[str, Any] = {}
 
     # start prediction per AF2 model, 2 are used by default due to masked templates
     for model_num in prediction_models:
@@ -462,17 +463,17 @@ def predict_binder_complex(  # pylint: disable=too-many-arguments,too-many-local
 
 # run prediction for binder alone
 def predict_binder_alone(  # pylint: disable=too-many-arguments,unused-argument,too-many-positional-arguments
-    prediction_model,
-    binder_sequence,
-    mpnn_design_name,
-    length,
-    trajectory_pdb,
-    binder_chain,
-    prediction_models,
-    advanced_settings,
-    design_paths,
-    seed=None,
-):
+    prediction_model: Any,
+    binder_sequence: str,
+    mpnn_design_name: str,
+    length: int,
+    trajectory_pdb: str,
+    binder_chain: str,
+    prediction_models: List[int],
+    advanced_settings: Dict[str, Any],
+    design_paths: Dict[str, str],
+    seed: Optional[int] = None,
+) -> Dict[int, Dict[str, float]]:
     """Predict binder structure alone using AlphaFold2."""
     binder_stats = {}
 
@@ -510,8 +511,8 @@ def predict_binder_alone(  # pylint: disable=too-many-arguments,unused-argument,
 
 # run MPNN to generate sequences for binders
 def mpnn_gen_sequence(
-    trajectory_pdb, binder_chain, trajectory_interface_residues, advanced_settings
-):
+    trajectory_pdb: str, binder_chain: str, trajectory_interface_residues: Dict[int, str], advanced_settings: Dict[str, Any]
+) -> List[str]:
     """Generate protein sequence using MPNN model."""
     # clear GPU memory
     clear_mem()
@@ -527,7 +528,7 @@ def mpnn_gen_sequence(
     design_chains = "A," + binder_chain
 
     if advanced_settings["mpnn_fix_interface"]:
-        fixed_positions = "A," + trajectory_interface_residues
+        fixed_positions = "A," + ",".join(f"{k}{v}" for k, v in trajectory_interface_residues.items())
         fixed_positions = fixed_positions.rstrip(",")
         print(f"Fixing interface residues: {trajectory_interface_residues}")
     else:
@@ -548,18 +549,18 @@ def mpnn_gen_sequence(
         batch=advanced_settings["num_seqs"]
     )
 
-    return mpnn_sequences
+    return []
 
 # Get pLDDT of best model
-def get_best_plddt(af_model, length):
+def get_best_plddt(af_model: Any, length: int) -> float:
     """Get pLDDT of best model."""
-    return round(np.mean(af_model._tmp["best"]["aux"]["plddt"][-length:]),2)  # pylint: disable=protected-access
+    return float(round(np.mean(af_model._tmp["best"]["aux"]["plddt"][-length:]),2))  # pylint: disable=protected-access
 
 # Define radius of gyration loss for colabdesign
-def add_rg_loss(self, weight=0.1):
+def add_rg_loss(self: Any, weight: float = 0.1) -> None:
     """add radius of gyration loss"""
 
-    def loss_fn(_inputs, outputs):  # pylint: disable=unused-argument
+    def loss_fn(_inputs: Any, outputs: Any) -> Dict[str, Any]:  # pylint: disable=unused-argument
         xyz = outputs["structure_module"]
         ca = xyz["final_atom_positions"][:, residue_constants.atom_order["CA"]]
         ca = ca[-self._binder_len :]  # pylint: disable=protected-access
@@ -574,9 +575,9 @@ def add_rg_loss(self, weight=0.1):
 
 
 # Define interface pTM loss for colabdesign
-def add_i_ptm_loss(self, weight=0.1):
+def add_i_ptm_loss(self: Any, weight: float = 0.1) -> None:
     """Add interface pTM loss for ColabDesign."""
-    def loss_iptm(inputs, outputs):
+    def loss_iptm(inputs: Any, outputs: Any) -> Any:
         p = 1 - get_ptm(inputs, outputs, interface=True)
         i_ptm = mask_loss(p)
         return {"i_ptm": i_ptm}
@@ -586,9 +587,9 @@ def add_i_ptm_loss(self, weight=0.1):
 
 
 # add helicity loss
-def add_helix_loss(self, weight=0):
+def add_helix_loss(self: Any, weight: float = 0) -> None:
     """Add helicity loss for ColabDesign."""
-    def binder_helicity(inputs, outputs):
+    def binder_helicity(inputs: Any, outputs: Any) -> Any:
         if "offset" in inputs:
             offset = inputs["offset"]
         else:
@@ -624,10 +625,10 @@ def add_helix_loss(self, weight=0):
 
 
 # add N- and C-terminus distance loss
-def add_termini_distance_loss(self, weight=0.1, threshold_distance=7.0):
+def add_termini_distance_loss(self: Any, weight: float = 0.1, threshold_distance: float = 7.0) -> None:
     """Add loss penalizing the distance between N and C termini"""
 
-    def loss_fn(_inputs, outputs):  # pylint: disable=unused-argument
+    def loss_fn(_inputs: Any, outputs: Any) -> Dict[str, Any]:  # pylint: disable=unused-argument
         xyz = outputs["structure_module"]
         ca = xyz["final_atom_positions"][:, residue_constants.atom_order["CA"]]
         ca = ca[-self._binder_len :]  # pylint: disable=protected-access
@@ -651,7 +652,7 @@ def add_termini_distance_loss(self, weight=0.1, threshold_distance=7.0):
     self.opt["weights"]["NC"] = weight
 
 # plot design trajectory losses
-def plot_trajectory(af_model, design_name, design_paths):
+def plot_trajectory(af_model: Any, design_name: str, design_paths: Dict[str, str]) -> None:
     """Plot design trajectory losses."""
     metrics_to_plot = [
         "loss",

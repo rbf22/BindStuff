@@ -4,6 +4,7 @@
 ####################################
 ### Import dependencies
 from collections import defaultdict
+from typing import Dict, Tuple
 import numpy as np
 from scipy.spatial import cKDTree
 from Bio.PDB import PDBParser, DSSP, Selection, Superimposer
@@ -11,7 +12,7 @@ from Bio.SeqUtils.ProtParam import ProteinAnalysis
 from Bio.PDB.Polypeptide import is_aa
 
 # analyze sequence composition of design
-def validate_design_sequence(sequence, num_clashes, advanced_settings):  # pylint: disable=too-many-locals
+def validate_design_sequence(sequence: str, num_clashes: int, advanced_settings: Dict) -> str:  # pylint: disable=too-many-locals
     """Validate a protein design sequence by checking for clashes and restricted amino acids."""
     note_array = []
 
@@ -49,7 +50,7 @@ def validate_design_sequence(sequence, num_clashes, advanced_settings):  # pylin
     return notes
 
 # temporary function, calculate RMSD of input PDB and trajectory target
-def target_pdb_rmsd(trajectory_pdb, starting_pdb, chain_ids_string):  # pylint: disable=too-many-locals
+def target_pdb_rmsd(trajectory_pdb: str, starting_pdb: str, chain_ids_string: str) -> float:  # pylint: disable=too-many-locals
     """Calculate RMSD between trajectory PDB and starting PDB structures."""
     # Parse the PDB files
     parser = PDBParser(QUIET=True)
@@ -91,10 +92,10 @@ def target_pdb_rmsd(trajectory_pdb, starting_pdb, chain_ids_string):  # pylint: 
     sup = Superimposer()
     sup.set_atoms(atoms_starting, atoms_trajectory)
     rmsd = sup.rms
-    return round(rmsd, 2)
+    return float(round(rmsd, 2))
 
 # detect C alpha clashes for deformed trajectories
-def calculate_clash_score(pdb_file, threshold=2.4, only_ca=False):  # pylint: disable=too-many-locals
+def calculate_clash_score(pdb_file: str, threshold: float = 2.4, only_ca: bool = False) -> int:  # pylint: disable=too-many-locals
     """Calculate clash score for a protein structure."""
     parser = PDBParser(QUIET=True)
     structure = parser.get_structure("protein", pdb_file)
@@ -152,7 +153,7 @@ three_to_one_map = {
 
 
 # identify interacting residues at the binder interface
-def hotspot_residues(trajectory_pdb, binder_chain="B", atom_distance_cutoff=4.0):  # pylint: disable=too-many-locals
+def hotspot_residues(trajectory_pdb: str, binder_chain: str = "B", atom_distance_cutoff: float = 4.0) -> Dict[int, str]:  # pylint: disable=too-many-locals
     """Extract hotspot residues from a protein structure."""
     # Parse the PDB file
     parser = PDBParser(QUIET=True)
@@ -190,8 +191,8 @@ def hotspot_residues(trajectory_pdb, binder_chain="B", atom_distance_cutoff=4.0)
 
 # calculate secondary structure percentage of design
 def calc_ss_percentage(  # pylint: disable=too-many-locals
-    pdb_file, advanced_settings, chain_id="B", atom_distance_cutoff=4.0
-):
+    pdb_file: str, advanced_settings: Dict, chain_id: str = "B", atom_distance_cutoff: float = 4.0
+) -> Tuple[float, float, float, float, float, float, float, float]:
     """Calculate secondary structure percentages for a protein chain."""
     # Parse the structure
     parser = PDBParser(QUIET=True)
@@ -202,8 +203,8 @@ def calc_ss_percentage(  # pylint: disable=too-many-locals
     dssp = DSSP(model, pdb_file, dssp=advanced_settings["dssp_path"])
 
     # Prepare to count residues
-    ss_counts = defaultdict(int)
-    ss_interface_counts = defaultdict(int)
+    ss_counts: Dict[str, int] = defaultdict(int)
+    ss_interface_counts: Dict[str, int] = defaultdict(int)
     plddts_interface = []
     plddts_ss = []
 
@@ -260,7 +261,7 @@ def calc_ss_percentage(  # pylint: disable=too-many-locals
 
     return (*percentages, *interface_percentages, i_plddt, ss_plddt)
 
-def calculate_percentages(total, helix, sheet):
+def calculate_percentages(total: int, helix: int, sheet: int) -> Tuple[float, float, float]:
     """Calculate secondary structure percentages from counts."""
     helix_percentage = round((helix / total) * 100, 2) if total > 0 else 0
     sheet_percentage = round((sheet / total) * 100, 2) if total > 0 else 0
