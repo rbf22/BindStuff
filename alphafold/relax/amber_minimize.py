@@ -84,7 +84,7 @@ def _openmm_minimize(
   pdb_file = io.StringIO(pdb_str)
   pdb = openmm_app.PDBFile(pdb_file)
 
-  force_field = openmm_app.ForceField("amber99sb.xml")
+  force_field = openmm_app.ForceField("amber03.xml")
   constraints = openmm_app.HBonds
   system = force_field.createSystem(
       pdb.topology, constraints=constraints)

@@ -4,7 +4,6 @@ version = "0.1.0"
 description = "Protein binder design pipeline"
 authors = ["No author specified"]
 readme = "README.md"
-packages = [{include = "pdbfixer"}]
 
 [tool.poetry.dependencies]
 python = ">=3.11"
@@ -14,12 +13,13 @@ pandas = "^2.3.2"
 matplotlib = "^3.10.5"
 scipy = "^1.16.1"
 prody = "^2.4.0"
-jax = ">=0.4,<=0.6.0"
+jax = "0.4.20"
+jaxlib = "0.4.20"
 colabdesign = {git = "https://github.com/sokrypton/ColabDesign.git"}
 biopython = "^1.81"
 pytest = "^8.4.1"
 absl-py = "^2.0.0"
-dm-haiku = "^0.0.12"
+dm-haiku = "0.0.12"
 tensorflow = "^2.15.0"
 dm-tree = "^0.1.8"
 
