@@ -57,7 +57,7 @@ import os
 import os.path
 import math
 from collections import defaultdict
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, List, Any, Tuple
 
 if sys.version_info >= (3,0):
     from urllib.request import urlopen

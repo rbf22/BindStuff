@@ -543,7 +543,7 @@ def mpnn_gen_sequence(
     )
 
     # sample MPNN sequences in parallel
-    mpnn_sequences = mpnn_model.sample(
+    mpnn_model.sample(
         temperature=advanced_settings["sampling_temp"],
         num=1,
         batch=advanced_settings["num_seqs"]
