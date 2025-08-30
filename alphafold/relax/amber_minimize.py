@@ -36,6 +36,7 @@ from openmm.app.internal.pdbstructure import PdbStructure
 ENERGY = unit.kilocalories_per_mole
 LENGTH = unit.angstroms
 
+
 def will_restrain(atom: openmm_app.Atom, rset: str) -> bool:
   """Returns True if the atom will be restrained by the given restraint set."""
 
@@ -381,7 +382,7 @@ def _run_one_iteration(
   Args:
     pdb_string: A pdb string.
     max_iterations: An `int` specifying the maximum number of L-BFGS iterations.
-        A value of 0 specifies no limit.
+    A value of 0 specifies no limit.
     tolerance: kcal/mol, the energy tolerance of L-BFGS.
     stiffness: kcal/mol A**2, spring constant of heavy atom restraining potential.
     restraint_set: The set of atoms to restrain.
