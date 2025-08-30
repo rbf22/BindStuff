@@ -96,10 +96,10 @@ def rigids_from_3_points(
   return Rigids(rot=m, trans=origin)
 
 
-def rigids_from_list(l: List[jnp.ndarray]) -> Rigids:
+def rigids_from_list(arrays: List[jnp.ndarray]) -> Rigids:
   """Converts flat list of arrays to rigid transformations."""
-  assert len(l) == 12
-  return Rigids(Rots(*(l[:9])), Vecs(*(l[9:])))
+  assert len(arrays) == 12
+  return Rigids(Rots(*(arrays[:9])), Vecs(*(arrays[9:])))
 
 
 def rigids_from_quataffine(a: quat_affine.QuatAffine) -> Rigids:

@@ -234,7 +234,8 @@ def to_pdb(prot: Protein) -> str:
     PDB string.
   """
   restypes = residue_constants.restypes + ['X']
-  res_1to3 = lambda r: residue_constants.restype_1to3.get(restypes[r], 'UNK')
+  def res_1to3(r):
+    return residue_constants.restype_1to3.get(restypes[r], 'UNK')
   atom_types = residue_constants.atom_types
 
   pdb_lines = []

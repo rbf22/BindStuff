@@ -352,7 +352,8 @@ def atom37_to_frames(
   # Create the alternative ground truth frames.
   alt_gt_frames = gt_frames.compose_rotation(ambiguity_rot)
 
-  fix_shape = lambda x: jnp.reshape(x, aatype_in_shape + (8,))
+  def fix_shape(x):
+    return jnp.reshape(x, aatype_in_shape + (8,))
 
   # reshape back to original residue layout
   gt_frames = jax.tree.map(fix_shape, gt_frames)
