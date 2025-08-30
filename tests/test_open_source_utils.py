@@ -45,13 +45,19 @@ def test_openmm_relax(pdb_files):
 
 def test_align_pdbs(pdb_files):
     pdb1, pdb2 = pdb_files
+    # Introduce a slight modification to pdb2 to make it different from pdb1
+    with open(pdb2, "r+") as f:
+        content = f.read()
+        f.seek(0, 0)
+        f.write(content.replace("21.996", "22.996"))
     align_pdbs(pdb1, pdb2, "A", "B")
-    # No assertion here, just checking if it runs without errors
+    rmsd = unaligned_rmsd(pdb1, pdb2, "A", "B")
+    assert rmsd < 0.1
 
 def test_unaligned_rmsd(pdb_files):
     pdb1, pdb2 = pdb_files
     rmsd = unaligned_rmsd(pdb1, pdb2, "A", "B")
-    assert isinstance(rmsd, float)
+    assert rmsd == 0.0
 
 def test_score_interface(pdb_files):
     pdb1, _ = pdb_files
