@@ -1,27 +1,23 @@
 """
 Tests for the scoring module.
 """
-import unittest
+import pytest
 from functions import scoring
 
-class TestScoring(unittest.TestCase):
+
+@pytest.fixture
+def test_pdb_path():
     """
-    Tests for the scoring module.
+    Fixture to provide the test PDB path.
     """
+    return "tests/test_complex.pdb"
 
-    def setUp(self):
-        """
-        Set up the test environment.
-        """
-        self.test_pdb_path = "tests/test_complex.pdb"
 
-    def test_score_interface(self):
-        """
-        Test the score_interface function.
-        """
-        scores, _, _ = scoring.score_interface(self.test_pdb_path, binder_chain="B")
-        self.assertIsInstance(scores, dict)
-        self.assertIn("interface_nres", scores)
-
-if __name__ == "__main__":
-    unittest.main()
+def test_score_interface(test_pdb_path):
+    """
+    Test the score_interface function.
+    """
+    scores, _, _ = scoring.score_interface(test_pdb_path, binder_chain="B")
+    assert isinstance(scores, dict)
+    assert "interface_nres" in scores
+    

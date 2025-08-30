@@ -36,7 +36,6 @@ from openmm.app.internal.pdbstructure import PdbStructure
 ENERGY = unit.kilocalories_per_mole
 LENGTH = unit.angstroms
 
-
 def will_restrain(atom: openmm_app.Atom, rset: str) -> bool:
   """Returns True if the atom will be restrained by the given restraint set."""
 
@@ -380,47 +379,65 @@ def _run_one_iteration(
   Args:
     pdb_string: A pdb string.
     max_iterations: An `int` specifying the maximum number of L-BFGS iterations.
-    A value of 0 specifies no limit.
+        A value of 0 specifies no limit.
     tolerance: kcal/mol, the energy tolerance of L-BFGS.
-    stiffness: kcal/mol A**2, spring constant of heavy atom restraining
-      potential.
+    stiffness: kcal/mol A**2, spring constant of heavy atom restraining potential.
     restraint_set: The set of atoms to restrain.
     max_attempts: The maximum number of minimization attempts.
     use_gpu: Whether to run on GPU.
-    exclude_residues: An optional list of zero-indexed residues to exclude from
-        restraints.
+    exclude_residues: An optional list of zero-indexed residues to exclude from restraints.
 
   Returns:
-    A `dict` of minimization info.
+    A `dict` of minimization info including:
+      - "min_pdb": the latest minimized PDB string
+      - "success": whether the minimization fully converged
+      - "opt_time": total time spent
+      - "min_attempts": number of attempts performed
+      - "einit" / "efinal": energies before and after minimization
+      - "posinit" / "pos": atom positions before and after minimization
   """
   exclude_residues = exclude_residues or []
 
   # Assign physical dimensions.
-  tolerance = tolerance * ENERGY
-  stiffness = stiffness * ENERGY / (LENGTH**2)
+  tolerance = (tolerance * ENERGY).in_units_of(unit.kilojoule_per_mole)
+  stiffness = (stiffness * ENERGY / LENGTH**2).in_units_of(unit.kilojoule_per_mole / unit.nanometer**2)
 
   start = time.time()
-  minimized = False
   attempts = 0
-  while not minimized and attempts < max_attempts:
+  last_ret = {
+      "min_pdb": pdb_string,
+      "pos": None,
+      "posinit": None,
+      "einit": None,
+      "efinal": None,
+      "success": False
+  }
+
+  while attempts < max_attempts:
     attempts += 1
     try:
-      logging.info("Minimizing protein, attempt %d of %d.",
-                   attempts, max_attempts)
+      logging.info("Minimizing protein, attempt %d of %d.", attempts, max_attempts)
       ret = _openmm_minimize(
-          pdb_string, max_iterations=max_iterations,
-          tolerance=tolerance, stiffness=stiffness,
+          pdb_string,
+          max_iterations=max_iterations,
+          tolerance=tolerance,
+          stiffness=stiffness,
           restraint_set=restraint_set,
           exclude_residues=exclude_residues,
-          use_gpu=use_gpu)
-      minimized = True
-    except Exception as e:  # pylint: disable=broad-except
-      logging.info(e)
-  if not minimized:
-    raise ValueError(f"Minimization failed after {max_attempts} attempts.")
-  ret["opt_time"] = time.time() - start
-  ret["min_attempts"] = attempts
-  return ret
+          use_gpu=use_gpu
+      )
+      last_ret.update(ret)
+      last_ret["success"] = True
+      break
+    except Exception as e:
+      logging.warning("Attempt %d failed: %s", attempts, e)
+      # if ret exists, keep the latest positions
+      if 'ret' in locals() and ret is not None:
+          last_ret.update(ret)
+
+  last_ret["opt_time"] = time.time() - start
+  last_ret["min_attempts"] = attempts
+  return last_ret
 
 
 def run_pipeline(

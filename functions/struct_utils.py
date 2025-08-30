@@ -8,7 +8,8 @@ import warnings
 from typing import List, Tuple
 
 import numpy as np
-from Bio import PDB, pairwise2
+from Bio import PDB
+from Bio.Align import PairwiseAligner
 from Bio.PDB import Superimposer
 from Bio.Data.PDBData import protein_letters_3to1
 from Bio.PDB.Polypeptide import is_aa
@@ -61,10 +62,21 @@ def map_residues_by_sequence(
     """
     Aligns two lists of residues by sequence and returns the corresponding pairs.
     """
+    # Convert residue lists to one-letter sequences
     ref_seq = "".join([protein_letters_3to1.get(res.resname, 'X') for res in ref_residues])
     mov_seq = "".join([protein_letters_3to1.get(res.resname, 'X') for res in mov_residues])
 
-    alignments = pairwise2.align.globalxx(ref_seq, mov_seq)
+    # Initialize aligner
+    aligner = PairwiseAligner()
+    aligner.mode = "global"  # or "local" depending on your needs
+    aligner.match_score = 1
+    aligner.mismatch_score = -1
+    aligner.open_gap_score = -1
+    aligner.extend_gap_score = -0.5
+
+    # Run the alignment
+    alignments = aligner.align(ref_seq, mov_seq)
+
     if not alignments:
         return [], []
 
