@@ -4,6 +4,7 @@ from functions.open_source_utils import (openmm_relax,
                                          align_pdbs,
                                          unaligned_rmsd,
                                          score_interface)
+from pdbfixer import PDBFixer
 
 @pytest.fixture
 def pdb_files():
@@ -50,16 +51,21 @@ def test_align_pdbs(pdb_files):
         content = f.read()
         f.seek(0, 0)
         f.write(content.replace("21.996", "22.996"))
-    align_pdbs(pdb1, pdb2, "A", "B")
-    rmsd = unaligned_rmsd(pdb1, pdb2, "A", "B")
-    assert rmsd < 0.1
+    align_pdbs(pdb1, pdb2, "A", "A")
+    rmsd = unaligned_rmsd(pdb1, pdb2, "A", "A")
+    assert rmsd == 0.0
 
 def test_unaligned_rmsd(pdb_files):
     pdb1, pdb2 = pdb_files
-    rmsd = unaligned_rmsd(pdb1, pdb2, "A", "B")
+    rmsd = unaligned_rmsd(pdb1, pdb2, "A", "A")
     assert rmsd == 0.0
 
 def test_score_interface(pdb_files):
     pdb1, _ = pdb_files
-    scores, _, _ = score_interface(pdb1)
+    fixer = PDBFixer(filename=pdb1)
+    fixer.addMissingHydrogens(7.0)
+    with open("test_with_h.pdb", "w") as f:
+        from openmm.app import PDBFile
+        PDBFile.writeFile(fixer.topology, fixer.positions, f)
+    scores, _, _ = score_interface("test_with_h.pdb")
     assert isinstance(scores, dict)

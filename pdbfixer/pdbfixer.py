@@ -140,11 +140,11 @@ class CCDResidueDefinition:
     bonds: list[CCDBondDefinition]
 
     @classmethod
-    def fromReader(cls, reader: PdbxReader) -> 'CCDResidueDefinition':
+    def fromReader(cls, reader: PdbxReader) -> Optional['CCDResidueDefinition']:
         """
         Create a CCDResidueDefinition by parsing a CCD CIF file.
         """
-        data = []
+        data: list = []
         reader.read(data)
         block = data[0]
 
@@ -495,7 +495,7 @@ class PDBFixer(object):
             file = urlopen(f'https://files.rcsb.org/ligands/download/{residueName}.cif')
             contents = file.read().decode('utf-8')
             file.close()
-        except:
+        except Exception:
             # None represents that the residue has been looked up and could not
             # be found. This is distinct from an entry simply not being present
             # in the cache.
@@ -762,7 +762,7 @@ class PDBFixer(object):
 
         try:
             prevResidue = list(chain.residues())[-1]
-        except:
+        except Exception:
             prevResidue = None
         for i, residueName in enumerate(residueNames):
             template = self._getTemplate(residueName)
@@ -853,9 +853,9 @@ class PDBFixer(object):
         modeller = app.Modeller(self.topology, self.positions)
         allChains = list(self.topology.chains())
 
-        if chainIndices == None:
+        if chainIndices is None:
             chainIndices = list()
-        if chainIds != None:
+        if chainIds is not None:
             # Add all chains that match the selection to the list.
             for (chainNumber, chain) in enumerate(allChains):
                 if chain.id in chainIds:
@@ -917,7 +917,7 @@ class PDBFixer(object):
                 if chain in chainSequence:
                     continue
                 for offset in range(len(sequence.residues)-len(chainWithGaps[chain])+1):
-                    if all(a == b or b == None for a,b in zip(sequence.residues[offset:], chainWithGaps[chain])):
+                    if all(a == b or b is None for a,b in zip(sequence.residues[offset:], chainWithGaps[chain])):
                         chainSequence[chain] = sequence
                         chainOffset[chain] = offset
                         break
@@ -976,7 +976,7 @@ class PDBFixer(object):
                     replacement = modres[key]
                     if replacement == 'DU':
                         replacement = 'DT'
-                    if self._getTemplate(replacement) != None:
+                    if self._getTemplate(replacement) is not None:
                         nonstandard[residue] = replacement
         self.nonstandardResidues = [(r, nonstandard[r]) for r in sorted(nonstandard, key=lambda r: r.index)]
 
@@ -1718,52 +1718,63 @@ def main():
         parser.add_option('--ionic-strength', type='float', default=0.0, dest='ionic', metavar='STRENGTH', help='molar concentration of ions to add to the water box [default: 0.0]')
         parser.add_option('--verbose', default=False, action='store_true', dest='verbose', metavar='VERBOSE', help='Print verbose output')
         (options, args) = parser.parse_args()
-        if (len(args) == 0) and (options.pdbid==None) and (options.url==None):
+        if (len(args) == 0) and (options.pdbid is None) and (options.url is None):
             parser.error('No filename specified')
         if len(args) > 1:
             parser.error('Must specify a single filename or --pdbid or --url')
-        if options.pdbid != None:
-            if options.verbose: print('Retrieving PDB "' + options.pdbid + '" from RCSB...')
+        if options.pdbid is not None:
+            if options.verbose:
+                print('Retrieving PDB "' + options.pdbid + '" from RCSB...')
             fixer = PDBFixer(pdbid=options.pdbid)
-        elif options.url != None:
-            if options.verbose: print('Retrieving PDB from URL "' + options.url + '"...')
+        elif options.url is not None:
+            if options.verbose:
+                print('Retrieving PDB from URL "' + options.url + '"...')
             fixer = PDBFixer(url=options.url)
         else:
             fixer = PDBFixer(filename=sys.argv[1])
         if options.residues:
-            if options.verbose: print('Finding missing residues...')
+            if options.verbose:
+                print('Finding missing residues...')
             fixer.findMissingResidues()
         else:
             fixer.missingResidues = {}
         if options.nonstandard:
-            if options.verbose: print('Finding nonstandard residues...')
+            if options.verbose:
+                print('Finding nonstandard residues...')
             fixer.findNonstandardResidues()
-            if options.verbose: print('Replacing nonstandard residues...')
+            if options.verbose:
+                print('Replacing nonstandard residues...')
             fixer.replaceNonstandardResidues()
         if options.heterogens == 'none':
             fixer.removeHeterogens(False)
         elif options.heterogens == 'water':
             fixer.removeHeterogens(True)
-        if options.verbose: print('Finding missing atoms...')
+        if options.verbose:
+            print('Finding missing atoms...')
         fixer.findMissingAtoms()
         if options.atoms not in ('all', 'heavy'):
             fixer.missingAtoms = {}
             fixer.missingTerminals = {}
-        if options.verbose: print('Adding missing atoms...')
+        if options.verbose:
+            print('Adding missing atoms...')
         fixer.addMissingAtoms()
         if options.atoms in ('all', 'hydrogen'):
-            if options.verbose: print('Adding missing hydrogens...')
+            if options.verbose:
+                print('Adding missing hydrogens...')
             fixer.addMissingHydrogens(options.ph)
         if options.box is not None:
-            if options.verbose: print('Adding solvent...')
+            if options.verbose:
+                print('Adding solvent...')
             fixer.addSolvent(boxSize=options.box*unit.nanometer, positiveIon=options.positiveIon,
                 negativeIon=options.negativeIon, ionicStrength=options.ionic*unit.molar)
         with open(options.output, 'w') as f:
-            if options.verbose: print('Writing output...')
+            if options.verbose:
+                print('Writing output...')
             if fixer.source is not None:
                 f.write("REMARK   1 PDBFIXER FROM: %s\n" % fixer.source)
             app.PDBFile.writeFile(fixer.topology, fixer.positions, f, True)
-        if options.verbose: print('Done.')
+        if options.verbose:
+            print('Done.')
 
 if __name__ == '__main__':
     main()
