@@ -21,14 +21,15 @@ ATOM      6  N   GLY A   2      30.438  35.586  20.435  1.00  0.00           N
 ATOM      7  CA  GLY A   2      31.597  35.968  21.212  1.00  0.00           C
 ATOM      8  C   GLY A   2      32.628  34.869  21.231  1.00  0.00           C
 ATOM      9  O   GLY A   2      32.488  33.963  20.511  1.00  0.00           O
-ATOM     10  N   LEU B   1      33.668  34.939  22.011  1.00  0.00           N
-ATOM     11  CA  LEU B   1      34.787  34.029  22.069  1.00  0.00           C
-ATOM     12  C   LEU B   1      35.808  34.596  22.989  1.00  0.00           C
-ATOM     13  O   LEU B   1      35.658  35.580  23.589  1.00  0.00           O
-ATOM     14  CB  LEU B   1      35.213  33.015  21.013  1.00  0.00           C
-ATOM     15  CG  LEU B   1      36.258  31.989  21.328  1.00  0.00           C
-ATOM     16  CD1 LEU B   1      36.689  31.159  20.142  1.00  0.00           C
-ATOM     17  CD2 LEU B   1      37.478  32.518  21.996  1.00  0.00           C
+ATOM     10  N   LYS B   1      33.668  34.939  22.011  1.00  0.00           N
+ATOM     11  CA  LYS B   1      34.787  34.029  22.069  1.00  0.00           C
+ATOM     12  C   LYS B   1      35.808  34.596  22.989  1.00  0.00           C
+ATOM     13  O   LYS B   1      35.658  35.580  23.589  1.00  0.00           O
+ATOM     14  CB  LYS B   1      35.213  33.015  21.013  1.00  0.00           C
+ATOM     15  CG  LYS B   1      36.258  31.989  21.328  1.00  0.00           C
+ATOM     16  CD  LYS B   1      36.689  31.159  20.142  1.00  0.00           C
+ATOM     17  CE  LYS B   1      37.478  32.518  21.996  1.00  0.00           C
+ATOM     18  NZ  LYS B   1      38.200  33.200  22.800  1.00  0.00           N
 """
     with open("test.pdb", "w", encoding='utf-8') as f:
         f.write(pdb_content)
@@ -42,15 +43,15 @@ ATOM     17  CD2 LEU B   1      37.478  32.518  21.996  1.00  0.00           C
     if os.path.exists("test_relaxed.pdb"):
         os.remove("test_relaxed.pdb")
 
-def test_openmm_relax(test_pdb_files):
+def test_openmm_relax(pdb_files):
     """Test OpenMM energy minimization."""
-    pdb1, _ = test_pdb_files
+    pdb1, _ = pdb_files
     openmm_relax(pdb1, "test_relaxed.pdb")
     assert os.path.exists("test_relaxed.pdb")
 
-def test_align_pdbs(test_pdb_files):
+def test_align_pdbs(pdb_files):
     """Test PDB structure alignment."""
-    pdb1, pdb2 = test_pdb_files
+    pdb1, pdb2 = pdb_files
     # Introduce a slight modification to pdb2 to make it different from pdb1
     with open(pdb2, "r+", encoding='utf-8') as f:
         content = f.read()
@@ -60,15 +61,15 @@ def test_align_pdbs(test_pdb_files):
     rmsd = unaligned_rmsd(pdb1, pdb2, "A", "A")
     assert rmsd == 0.0
 
-def test_unaligned_rmsd(test_pdb_files):
+def test_unaligned_rmsd(pdb_files):
     """Test unaligned RMSD calculation."""
-    pdb1, pdb2 = test_pdb_files
+    pdb1, pdb2 = pdb_files
     rmsd = unaligned_rmsd(pdb1, pdb2, "A", "A")
     assert rmsd == 0.0
 
-def test_score_interface(test_pdb_files):
+def test_score_interface(pdb_files):
     """Test interface scoring functionality."""
-    pdb1, _ = test_pdb_files
+    pdb1, _ = pdb_files
     fixer = PDBFixer(filename=pdb1)
     fixer.addMissingHydrogens(7.0)
     with open("test_with_h.pdb", "w", encoding='utf-8') as f:
