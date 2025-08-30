@@ -1,15 +1,16 @@
+"""Utility functions for open source protein structure analysis."""
 #
 # Open-Source Utilities
 #
 import os
+from Bio.PDB import PDBParser, SASA, PDBIO, Superimposer
 from prody import (parsePDB, Interactions, showPairEnergy)
 from openmm import app
 from pdbfixer import PDBFixer
-from Bio.PDB import PDBParser, SASA, PDBIO, Superimposer
 from .generic_utils import clean_pdb
 
 
-def openmm_relax(pdb_file, relaxed_pdb_path):
+def openmm_relax(pdb_file, relaxed_pdb_path):  # pylint: disable=too-many-locals
     """
     Performs energy minimization on a protein structure using PDBFixer.
     """
@@ -21,12 +22,12 @@ def openmm_relax(pdb_file, relaxed_pdb_path):
         fixer.findMissingAtoms()
         fixer.addMissingAtoms()
         fixer.addMissingHydrogens(7.0)
-        with open(relaxed_pdb_path, "w") as f:
+        with open(relaxed_pdb_path, "w", encoding='utf-8') as f:
             app.PDBFile.writeFile(fixer.topology, fixer.positions, f, keepIds=True)
         clean_pdb(relaxed_pdb_path)
 
 
-def align_pdbs(reference_pdb, align_pdb, reference_chain_id, align_chain_id):
+def align_pdbs(reference_pdb, align_pdb, reference_chain_id, align_chain_id):  # pylint: disable=too-many-locals
     """
     Aligns two PDB structures using Bio.PDB.Superimposer.
     """
@@ -65,7 +66,7 @@ def align_pdbs(reference_pdb, align_pdb, reference_chain_id, align_chain_id):
     clean_pdb(align_pdb)
 
 
-def unaligned_rmsd(reference_pdb, align_pdb,
+def unaligned_rmsd(reference_pdb, align_pdb,  # pylint: disable=too-many-locals
                    reference_chain_id, align_chain_id):
     """
     Calculates the RMSD between two chains without prior alignment.
@@ -101,7 +102,7 @@ def unaligned_rmsd(reference_pdb, align_pdb,
     return round(super_imposer.rms, 2)
 
 
-def score_interface(pdb_file, binder_chain="B"):
+def score_interface(pdb_file, binder_chain="B"):  # pylint: disable=too-many-locals,too-many-branches,too-many-statements
     """
     Calculates interface scores using a combination of ProDy and BioPython.
     """
@@ -173,7 +174,7 @@ def score_interface(pdb_file, binder_chain="B"):
             interface_interface_hbonds = 0
             interface_dg = 0
 
-    except Exception:  # pylint: disable=broad-except-clause
+    except (ValueError, RuntimeError, OSError):
         interface_interface_hbonds = 0
         interface_dg = 0
 
@@ -189,21 +190,26 @@ def score_interface(pdb_file, binder_chain="B"):
 
     # Isolate chains for individual SASA calculation
     class ChainSelect:
+        """Chain selector for SASA calculations."""
         def __init__(self, chain_id):
             self.chain_id = chain_id
 
-        def accept_model(self, model):
+        def accept_model(self, _model):
+            """Accept all models."""
             return 1
 
         def accept_chain(self, chain):
+            """Accept chains matching the specified chain ID."""
             if chain.get_id() == self.chain_id:
                 return 1
             return 0
 
-        def accept_residue(self, residue):
+        def accept_residue(self, _residue):
+            """Accept all residues."""
             return 1
 
-        def accept_atom(self, atom):
+        def accept_atom(self, _atom):
+            """Accept all atoms."""
             return 1
 
     io = PDBIO()

@@ -1,16 +1,18 @@
+"""Utility functions for protein structure analysis using BioPython."""
 ####################################
 ################ BioPython functions
 ####################################
 ### Import dependencies
-import numpy as np
 from collections import defaultdict
+import numpy as np
 from scipy.spatial import cKDTree
 from Bio.PDB import PDBParser, DSSP, Selection, Superimposer
 from Bio.SeqUtils.ProtParam import ProteinAnalysis
 from Bio.PDB.Polypeptide import is_aa
 
 # analyze sequence composition of design
-def validate_design_sequence(sequence, num_clashes, advanced_settings):
+def validate_design_sequence(sequence, num_clashes, advanced_settings):  # pylint: disable=too-many-locals
+    """Validate a protein design sequence by checking for clashes and restricted amino acids."""
     note_array = []
 
     # Check if protein contains clashes after relaxation
@@ -19,10 +21,10 @@ def validate_design_sequence(sequence, num_clashes, advanced_settings):
 
     # Check if the sequence contains disallowed amino acids
     if advanced_settings["omit_AAs"]:
-        restricted_AAs = advanced_settings["omit_AAs"].split(',')
-        for restricted_AA in restricted_AAs:
-            if restricted_AA in sequence:
-                note_array.append('Contains: '+restricted_AA+'!')
+        restricted_aas = advanced_settings["omit_AAs"].split(',')
+        for restricted_aa in restricted_aas:
+            if restricted_aa in sequence:
+                note_array.append('Contains: '+restricted_aa+'!')
 
     # Analyze the protein
     analysis = ProteinAnalysis(sequence)
@@ -38,7 +40,8 @@ def validate_design_sequence(sequence, num_clashes, advanced_settings):
 
     # Check if the absorption is high enough
     if extinction_coefficient_reduced_1 <= 2:
-        note_array.append(f'Absorption value is {extinction_coefficient_reduced_1}, consider adding tryptophane to design.')
+        note_array.append(f'Absorption value is {extinction_coefficient_reduced_1}, '
+                         'consider adding tryptophane to design.')
 
     # Join the notes into a single string
     notes = ' '.join(note_array)
@@ -46,7 +49,8 @@ def validate_design_sequence(sequence, num_clashes, advanced_settings):
     return notes
 
 # temporary function, calculate RMSD of input PDB and trajectory target
-def target_pdb_rmsd(trajectory_pdb, starting_pdb, chain_ids_string):
+def target_pdb_rmsd(trajectory_pdb, starting_pdb, chain_ids_string):  # pylint: disable=too-many-locals
+    """Calculate RMSD between trajectory PDB and starting PDB structures."""
     # Parse the PDB files
     parser = PDBParser(QUIET=True)
     structure_trajectory = parser.get_structure("trajectory", trajectory_pdb)
@@ -82,16 +86,16 @@ def target_pdb_rmsd(trajectory_pdb, starting_pdb, chain_ids_string):
     atoms_trajectory = [
         residue["CA"] for residue in residues_trajectory if "CA" in residue
     ]
-    
+
     # Calculate RMSD using structural alignment
     sup = Superimposer()
     sup.set_atoms(atoms_starting, atoms_trajectory)
     rmsd = sup.rms
-    
     return round(rmsd, 2)
 
 # detect C alpha clashes for deformed trajectories
-def calculate_clash_score(pdb_file, threshold=2.4, only_ca=False):
+def calculate_clash_score(pdb_file, threshold=2.4, only_ca=False):  # pylint: disable=too-many-locals
+    """Calculate clash score for a protein structure."""
     parser = PDBParser(QUIET=True)
     structure = parser.get_structure("protein", pdb_file)
 
@@ -148,7 +152,8 @@ three_to_one_map = {
 
 
 # identify interacting residues at the binder interface
-def hotspot_residues(trajectory_pdb, binder_chain="B", atom_distance_cutoff=4.0):
+def hotspot_residues(trajectory_pdb, binder_chain="B", atom_distance_cutoff=4.0):  # pylint: disable=too-many-locals
+    """Extract hotspot residues from a protein structure."""
     # Parse the PDB file
     parser = PDBParser(QUIET=True)
     structure = parser.get_structure("complex", trajectory_pdb)
@@ -169,7 +174,7 @@ def hotspot_residues(trajectory_pdb, binder_chain="B", atom_distance_cutoff=4.0)
     interacting_residues = {}
 
     # Query the tree for pairs of atoms within the distance cutoff
-    pairs = binder_tree.query_ball_tree(target_tree, atom_distance_cutoff)
+    pairs = binder_tree.query_ball_tree(target_tree, atom_distance_cutoff, p=2)
 
     # Process each binder atom's interactions
     for binder_idx, close_indices in enumerate(pairs):
@@ -184,9 +189,10 @@ def hotspot_residues(trajectory_pdb, binder_chain="B", atom_distance_cutoff=4.0)
     return interacting_residues
 
 # calculate secondary structure percentage of design
-def calc_ss_percentage(
+def calc_ss_percentage(  # pylint: disable=too-many-locals
     pdb_file, advanced_settings, chain_id="B", atom_distance_cutoff=4.0
 ):
+    """Calculate secondary structure percentages for a protein chain."""
     # Parse the structure
     parser = PDBParser(QUIET=True)
     structure = parser.get_structure("protein", pdb_file)
@@ -249,13 +255,16 @@ def calc_ss_percentage(
         if plddts_interface
         else 0
     )
-    ss_plddt = round(sum(plddts_ss) / len(plddts_ss) / 100, 2) if plddts_ss else 0
+    ss_plddt = (round(sum(plddts_ss) / len(plddts_ss) / 100, 2)
+                if plddts_ss else 0)
 
     return (*percentages, *interface_percentages, i_plddt, ss_plddt)
 
 def calculate_percentages(total, helix, sheet):
+    """Calculate secondary structure percentages from counts."""
     helix_percentage = round((helix / total) * 100, 2) if total > 0 else 0
     sheet_percentage = round((sheet / total) * 100, 2) if total > 0 else 0
-    loop_percentage = round(((total - helix - sheet) / total) * 100, 2) if total > 0 else 0
+    loop_percentage = (round(((total - helix - sheet) / total) * 100, 2)
+                      if total > 0 else 0)
 
     return helix_percentage, sheet_percentage, loop_percentage

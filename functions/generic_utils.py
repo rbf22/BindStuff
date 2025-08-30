@@ -1,17 +1,20 @@
+"""Generic utility functions for the BindStuff pipeline."""
 ####################################
 ################## General functions
 ####################################
 ### Import dependencies
 import os
 import json
-import jax
 import shutil
+import sys
 import zipfile
+import jax
 import pandas as pd
 import numpy as np
 
 # Define labels for dataframes
 def generate_dataframe_labels():
+    """Generate column labels for trajectory dataframe."""
     # labels for trajectory
     trajectory_labels = [
         "Design",
@@ -124,6 +127,7 @@ def generate_dataframe_labels():
 
 # Create base directions of the project
 def generate_directories(design_path):
+    """Generate directory structure for design outputs."""
     design_path_names = [
         "Accepted",
         "Accepted/Ranked",
@@ -155,6 +159,7 @@ def generate_directories(design_path):
 
 # generate CSV file for tracking designs not passing filters
 def generate_filter_pass_csv(failure_csv, filter_json):
+    """Generate CSV file for tracking filter passes."""
     if not os.path.exists(failure_csv):
         with open(filter_json, "r", encoding="utf-8") as file:
             data = json.load(file)
@@ -204,15 +209,14 @@ def generate_filter_pass_csv(failure_csv, filter_json):
 
 # update failure rates from trajectories and early predictions
 def update_failures(failure_csv, failure_column_or_dict):
+    """Update failure tracking CSV with failed filter information."""
     failure_df = pd.read_csv(failure_csv)
-    
     def strip_model_prefix(name):
         # Strips the model-specific prefix if it exists
         parts = name.split('_')
         if parts[0].isdigit():
             return '_'.join(parts[1:])
         return name
-    
     # update dictionary coming from complex prediction
     if isinstance(failure_column_or_dict, dict):
         # Update using a dictionary of failures
@@ -229,11 +233,11 @@ def update_failures(failure_csv, failure_column_or_dict):
             failure_df[failure_column] += 1
         else:
             failure_df[failure_column] = 1
-    
     failure_df.to_csv(failure_csv, index=False)
 
 # Check if number of trajectories generated
 def check_n_trajectories(design_paths, advanced_settings):
+    """Check if required number of trajectories have been generated."""
     n_trajectories = [
         f
         for f in os.listdir(design_paths["Trajectory/Relaxed"])
@@ -245,14 +249,16 @@ def check_n_trajectories(design_paths, advanced_settings):
         and len(n_trajectories) >= advanced_settings["max_trajectories"]
     ):
         print(
-            f"Target number of {str(len(n_trajectories))} trajectories reached, stopping execution..."
+            f"Target number of {str(len(n_trajectories))} trajectories reached, "
+            "stopping execution..."
         )
         return True
     return False
 
 
-# Check if we have required number of accepted targets, rank them, and analyse sequence and structure properties
-def check_accepted_designs(
+# Check if we have required number of accepted targets, rank them, and analyse
+# sequence and structure properties
+def check_accepted_designs(  # pylint: disable=too-many-arguments,too-many-locals,too-many-positional-arguments
     design_paths,
     mpnn_csv,
     final_labels,
@@ -261,10 +267,12 @@ def check_accepted_designs(
     target_settings,
     design_labels,
 ):
+    """Check if required number of accepted designs have been generated."""
     accepted_binders = [
         f
         for f in os.listdir(design_paths["Accepted"])
-        if f.endswith(".pdb") and not f.startswith(".")
+        if (f.endswith(".pdb") and not f.startswith(".") and
+            f.startswith(target_settings["binder_name"]))
     ]
 
     if len(accepted_binders) >= target_settings["number_of_final_designs"]:
@@ -297,7 +305,8 @@ def check_accepted_designs(
                     old_path = os.path.join(design_paths["Accepted"], binder)
                     new_path = os.path.join(
                         design_paths["Accepted/Ranked"],
-                        f"{rank}_{target_settings['binder_name']}_model{model.rsplit('.', 1)[0]}.pdb",
+                        f"{rank}_{target_settings['binder_name']}_model"
+                        f"{model.rsplit('.', 1)[0]}.pdb",
                     )
                     shutil.copyfile(old_path, new_path)
 
@@ -316,11 +325,11 @@ def check_accepted_designs(
 
         return True
 
-    else:
-        return False
+    return False
 
 # Load required helicity value
 def load_helicity(advanced_settings):
+    """Load helicity values from file."""
     if advanced_settings["random_helicity"] is True:
         # will sample a random bias towards helicity
         helicity_value = round(np.random.uniform(-3, 1),2)
@@ -334,13 +343,14 @@ def load_helicity(advanced_settings):
 
 # Report JAX-capable devices
 def check_jax_gpu():
+    """Check if JAX GPU is available."""
     devices = jax.devices()
 
     has_gpu = any(device.platform == "gpu" for device in devices)
 
     if not has_gpu:
         print("No GPU device found, terminating.")
-        exit()
+        sys.exit(1)
 
     print("Available GPUs:")
     for i, device in enumerate(devices):
@@ -349,13 +359,14 @@ def check_jax_gpu():
 
 # check all input files being passed
 def perform_input_check(args):
+    """Perform input validation checks."""
     # Get the directory of the current script
     binder_script_path = os.path.dirname(os.path.abspath(__file__))
 
     # Ensure settings file is provided
     if not args.settings:
         print("Error: --settings is required.")
-        exit()
+        sys.exit(1)
 
     # Set default filters.json path if not provided
     if not args.filters:
@@ -374,6 +385,7 @@ def perform_input_check(args):
 
 # check specific advanced settings
 def perform_advanced_settings_check(advanced_settings, bindcraft_folder):
+    """Perform advanced settings validation checks."""
     # set paths to model weights and executables
     if bindcraft_folder == "colab":
         advanced_settings["af_params_dir"] = "/content/bindcraft/params/"
@@ -403,6 +415,7 @@ def perform_advanced_settings_check(advanced_settings, bindcraft_folder):
 
 # Load settings from JSONs
 def load_json_settings(settings_json, filters_json, advanced_json):
+    """Load settings from JSON file."""
     # load settings from json files
     with open(settings_json, "r", encoding="utf-8") as file:
         target_settings = json.load(file)
@@ -415,8 +428,10 @@ def load_json_settings(settings_json, filters_json, advanced_json):
 
     return target_settings, advanced_settings, filters
 
-# AF2 model settings, make sure non-overlapping models with template option are being used for design and re-prediction
+# AF2 model settings, make sure non-overlapping models with template option are
+# being used for design and re-prediction
 def load_af2_models(af_multimer_setting):
+    """Load AlphaFold2 model numbers from string."""
     if af_multimer_setting:
         design_models = [0,1,2,3,4]
         prediction_models = [0,1]
@@ -430,37 +445,43 @@ def load_af2_models(af_multimer_setting):
 
 # create csv for insertion of data
 def create_dataframe(csv_file, columns):
+    """Create empty dataframe with specified labels."""
     if not os.path.exists(csv_file):
         df = pd.DataFrame(columns=columns)
         df.to_csv(csv_file, index=False)
 
 # insert row of statistics into csv
 def insert_data(csv_file, data_array):
+    """Insert data row into dataframe."""
     df = pd.DataFrame([data_array])
     df.to_csv(csv_file, mode='a', header=False, index=False)
 
 # save generated sequence
 def save_fasta(design_name, sequence, design_paths):
+    """Save sequence to FASTA file."""
     fasta_path = os.path.join(design_paths["MPNN/Sequences"], design_name+".fasta")
-    with open(fasta_path,"w") as fasta:
+    with open(fasta_path,"w", encoding='utf-8') as fasta:
         line = f'>{design_name}\n{sequence}'
         fasta.write(line+"\n")
 
 # clean unnecessary rosetta information from PDB
 def clean_pdb(pdb_file):
+    """Clean PDB file by removing unwanted lines."""
     # Read the pdb file and filter relevant lines
-    with open(pdb_file, 'r') as f_in:
-        relevant_lines = [line for line in f_in if line.startswith(('ATOM', 'HETATM', 'MODEL', 'TER', 'END', 'LINK'))]
+    with open(pdb_file, 'r', encoding='utf-8') as f_in:
+        relevant_lines = [line for line in f_in
+                         if line.startswith(('ATOM', 'HETATM', 'MODEL',
+                                           'TER', 'END', 'LINK'))]
 
     # Write the cleaned lines back to the original pdb file
-    with open(pdb_file, 'w') as f_out:
+    with open(pdb_file, 'w', encoding='utf-8') as f_out:
         f_out.writelines(relevant_lines)
 
 def zip_and_empty_folder(folder_path, extension):
+    """Zip folder contents and empty the folder."""
     folder_basename = os.path.basename(folder_path)
-    zip_filename = os.path.join(
-        os.path.dirname(folder_path), folder_basename + ".zip"
-    )
+    zip_filename = os.path.join(os.path.dirname(folder_path),
+                               folder_basename + ".zip")
 
     # Open the zip file in 'a' mode to append if it exists, otherwise create a new one
     with zipfile.ZipFile(zip_filename, "a", zipfile.ZIP_DEFLATED) as zipf:
@@ -475,14 +496,15 @@ def zip_and_empty_folder(folder_path, extension):
     print(f"Files in folder '{folder_path}' have been zipped and removed.")
 
 # calculate averages for statistics
-def calculate_averages(statistics, handle_aa=False):
+def calculate_averages(statistics, handle_aa=False):  # pylint: disable=too-many-nested-blocks
+    """Calculate averages for dataframe columns."""
     # Initialize a dictionary to hold the sums of each statistic
     sums = {}
     # Initialize a dictionary to hold the sums of each amino acid count
     aa_sums = {}
 
     # Iterate over the model numbers
-    for model_num in range(1, 6):  # assumes models are numbered 1 through 5
+    for model_num in range(1, 6):  # assumes models are numbered 1 through 5  # pylint: disable=too-many-nested-blocks
         # Check if the model's data exists
         if model_num in statistics:
             # Get the model's statistics
@@ -496,10 +518,13 @@ def calculate_averages(statistics, handle_aa=False):
                 if value is None:
                     value = 0
 
-                # If the statistic is mpnn_interface_AA and we're supposed to handle it separately, do so
-                if handle_aa and stat == 'InterfaceAAs':
+                # If the statistic is mpnn_interface_AA and we're supposed to handle it
+                # separately, do so
+                if (handle_aa and stat == 'InterfaceAAs' and
+                    isinstance(value, dict)):
                     for aa, count in value.items():
-                        # If this is the first time we've seen this amino acid, initialize its sum to 0
+                        # If this is the first time we've seen this amino acid,
+                        # initialize its sum to 0
                         if aa not in aa_sums:
                             aa_sums[aa] = 0
                         aa_sums[aa] += count
@@ -511,13 +536,15 @@ def calculate_averages(statistics, handle_aa=False):
 
     # If we're handling aa counts, calculate their averages
     if handle_aa:
-        aa_averages = {aa: round(total / len(statistics),2) for aa, total in aa_sums.items()}
+        aa_averages = {aa: round(total / len(statistics), 2)
+                      for aa, total in aa_sums.items()}
         averages['InterfaceAAs'] = aa_averages
 
     return averages
 
 # filter designs based on feature thresholds
-def check_filters(mpnn_data, design_labels, filters):
+def check_filters(mpnn_data, design_labels, filters):  # pylint: disable=too-many-branches
+    """Check if design passes all specified filters."""
     # check mpnn_data against labels
     mpnn_dict = dict(zip(design_labels, mpnn_data))
 
@@ -535,9 +562,10 @@ def check_filters(mpnn_data, design_labels, filters):
             "5_InterfaceAAs",
         ):
             for aa, aa_conditions in conditions.items():
-                if mpnn_dict.get(label) is None:
+                label_dict = mpnn_dict.get(label)
+                if label_dict is None:
                     continue
-                value = mpnn_dict.get(label).get(aa)
+                value = label_dict.get(aa)
                 if value is None or aa_conditions["threshold"] is None:
                     continue
                 if aa_conditions["higher"]:
