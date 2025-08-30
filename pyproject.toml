@@ -41,21 +41,6 @@ module = [
     "prody.*",
     "colabdesign.*"
 ]
-[tool.mypy]
-python_version = "3.11"
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = true
-explicit_package_bases = true
-
-# Handle missing stubs for scientific packages
-[[tool.mypy.overrides]]
-module = [
-    "openmm.*",
-    "Bio.*", 
-    "prody.*",
-    "colabdesign.*"
-]
 ignore_missing_imports = true
 
 [tool.deptry]
