@@ -18,6 +18,10 @@ jax = ">=0.4,<=0.6.0"
 colabdesign = {git = "https://github.com/sokrypton/ColabDesign.git"}
 biopython = "^1.81"
 pytest = "^8.4.1"
+absl-py = "^2.0.0"
+dm-haiku = "^0.0.12"
+tensorflow = "^2.15.0"
+dm-tree = "^0.1.8"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.12.11"
@@ -32,6 +36,7 @@ warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
 explicit_package_bases = true
+exclude = ["pdbfixer/"]
 
 # Handle missing stubs for scientific packages
 [[tool.mypy.overrides]]
@@ -44,11 +49,18 @@ module = [
     "jax.*",
     "matplotlib.*",
     "scipy.*",
-    "pandas.*"
+    "pandas.*",
+    "pdbfixer.*"
 ]
 ignore_missing_imports = true
+ignore_errors = true
+
+[tool.poetry.extras]
+pyrosetta = ["pyrosetta"]
 
 [tool.deptry]
+extend_exclude = ["alphafold", "pdbfixer", "bindstuff.py"]
+per_rule_ignores = {DEP001 = ["pyrosetta"], DEP002 = ["absl-py", "dm-haiku", "tensorflow", "dm-tree", "urllib2", "cStringIO"]}
 
 [build-system]
 requires = ["poetry-core"]

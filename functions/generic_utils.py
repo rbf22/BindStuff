@@ -8,7 +8,7 @@ import json
 import shutil
 import sys
 import zipfile
-from typing import Dict, List, Tuple, Optional, Any
+from typing import Dict, List, Tuple, Any
 import jax
 import pandas as pd
 import numpy as np
