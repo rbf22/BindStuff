@@ -8,12 +8,13 @@ import json
 import shutil
 import sys
 import zipfile
+from typing import Dict, List, Tuple, Optional, Any
 import jax
 import pandas as pd
 import numpy as np
 
 # Define labels for dataframes
-def generate_dataframe_labels():
+def generate_dataframe_labels() -> Tuple[List[str], List[str], List[str]]:
     """Generate column labels for trajectory dataframe."""
     # labels for trajectory
     trajectory_labels = [
@@ -126,7 +127,7 @@ def generate_dataframe_labels():
     return trajectory_labels, design_labels, final_labels
 
 # Create base directions of the project
-def generate_directories(design_path):
+def generate_directories(design_path: str) -> Dict[str, str]:
     """Generate directory structure for design outputs."""
     design_path_names = [
         "Accepted",
@@ -158,7 +159,7 @@ def generate_directories(design_path):
     return design_paths
 
 # generate CSV file for tracking designs not passing filters
-def generate_filter_pass_csv(failure_csv, filter_json):
+def generate_filter_pass_csv(failure_csv: str, filter_json: str) -> None:
     """Generate CSV file for tracking filter passes."""
     if not os.path.exists(failure_csv):
         with open(filter_json, "r", encoding="utf-8") as file:
@@ -208,10 +209,10 @@ def generate_filter_pass_csv(failure_csv, filter_json):
         df.to_csv(failure_csv, index=False)
 
 # update failure rates from trajectories and early predictions
-def update_failures(failure_csv, failure_column_or_dict):
+def update_failures(failure_csv: str, failure_column_or_dict: Any) -> None:
     """Update failure tracking CSV with failed filter information."""
     failure_df = pd.read_csv(failure_csv)
-    def strip_model_prefix(name):
+    def strip_model_prefix(name: str) -> str:
         # Strips the model-specific prefix if it exists
         parts = name.split('_')
         if parts[0].isdigit():
@@ -236,7 +237,7 @@ def update_failures(failure_csv, failure_column_or_dict):
     failure_df.to_csv(failure_csv, index=False)
 
 # Check if number of trajectories generated
-def check_n_trajectories(design_paths, advanced_settings):
+def check_n_trajectories(design_paths: Dict[str, str], advanced_settings: Dict[str, Any]) -> bool:
     """Check if required number of trajectories have been generated."""
     n_trajectories = [
         f
@@ -259,14 +260,14 @@ def check_n_trajectories(design_paths, advanced_settings):
 # Check if we have required number of accepted targets, rank them, and analyse
 # sequence and structure properties
 def check_accepted_designs(  # pylint: disable=too-many-arguments,too-many-locals,too-many-positional-arguments
-    design_paths,
-    mpnn_csv,
-    final_labels,
-    final_csv,
-    advanced_settings,
-    target_settings,
-    design_labels,
-):
+    design_paths: Dict[str, str],
+    mpnn_csv: str,
+    final_labels: List[str],
+    final_csv: str,
+    advanced_settings: Dict[str, Any],
+    target_settings: Dict[str, Any],
+    design_labels: List[str],
+) -> bool:
     """Check if required number of accepted designs have been generated."""
     accepted_binders = [
         f
@@ -328,7 +329,7 @@ def check_accepted_designs(  # pylint: disable=too-many-arguments,too-many-local
     return False
 
 # Load required helicity value
-def load_helicity(advanced_settings):
+def load_helicity(advanced_settings: Dict[str, Any]) -> float:
     """Load helicity values from file."""
     if advanced_settings["random_helicity"] is True:
         # will sample a random bias towards helicity
@@ -339,10 +340,10 @@ def load_helicity(advanced_settings):
     else:
         # no bias towards helicity
         helicity_value = 0
-    return helicity_value
+    return float(helicity_value)
 
 # Report JAX-capable devices
-def check_jax_gpu():
+def check_jax_gpu() -> None:
     """Check if JAX GPU is available."""
     devices = jax.devices()
 
@@ -358,7 +359,7 @@ def check_jax_gpu():
 
 
 # check all input files being passed
-def perform_input_check(args):
+def perform_input_check(args: Any) -> Tuple[str, str, str]:
     """Perform input validation checks."""
     # Get the directory of the current script
     binder_script_path = os.path.dirname(os.path.abspath(__file__))
@@ -384,7 +385,7 @@ def perform_input_check(args):
 
 
 # check specific advanced settings
-def perform_advanced_settings_check(advanced_settings, bindcraft_folder):
+def perform_advanced_settings_check(advanced_settings: Dict[str, Any], bindcraft_folder: str) -> Dict[str, Any]:
     """Perform advanced settings validation checks."""
     # set paths to model weights and executables
     if bindcraft_folder == "colab":
@@ -414,7 +415,7 @@ def perform_advanced_settings_check(advanced_settings, bindcraft_folder):
 
 
 # Load settings from JSONs
-def load_json_settings(settings_json, filters_json, advanced_json):
+def load_json_settings(settings_json: str, filters_json: str, advanced_json: str) -> Tuple[Dict[str, Any], Dict[str, Any], Dict[str, Any]]:
     """Load settings from JSON file."""
     # load settings from json files
     with open(settings_json, "r", encoding="utf-8") as file:
@@ -430,7 +431,7 @@ def load_json_settings(settings_json, filters_json, advanced_json):
 
 # AF2 model settings, make sure non-overlapping models with template option are
 # being used for design and re-prediction
-def load_af2_models(af_multimer_setting):
+def load_af2_models(af_multimer_setting: bool) -> Tuple[List[int], List[int], bool]:
     """Load AlphaFold2 model numbers from string."""
     if af_multimer_setting:
         design_models = [0,1,2,3,4]
@@ -444,20 +445,20 @@ def load_af2_models(af_multimer_setting):
     return design_models, prediction_models, multimer_validation
 
 # create csv for insertion of data
-def create_dataframe(csv_file, columns):
+def create_dataframe(csv_file: str, columns: List[str]) -> None:
     """Create empty dataframe with specified labels."""
     if not os.path.exists(csv_file):
         df = pd.DataFrame(columns=columns)
         df.to_csv(csv_file, index=False)
 
 # insert row of statistics into csv
-def insert_data(csv_file, data_array):
+def insert_data(csv_file: str, data_array: List[Any]) -> None:
     """Insert data row into dataframe."""
     df = pd.DataFrame([data_array])
     df.to_csv(csv_file, mode='a', header=False, index=False)
 
 # save generated sequence
-def save_fasta(design_name, sequence, design_paths):
+def save_fasta(design_name: str, sequence: str, design_paths: Dict[str, str]) -> None:
     """Save sequence to FASTA file."""
     fasta_path = os.path.join(design_paths["MPNN/Sequences"], design_name+".fasta")
     with open(fasta_path,"w", encoding='utf-8') as fasta:
@@ -465,7 +466,7 @@ def save_fasta(design_name, sequence, design_paths):
         fasta.write(line+"\n")
 
 # clean unnecessary rosetta information from PDB
-def clean_pdb(pdb_file):
+def clean_pdb(pdb_file: str) -> None:
     """Clean PDB file by removing unwanted lines."""
     # Read the pdb file and filter relevant lines
     with open(pdb_file, 'r', encoding='utf-8') as f_in:
@@ -477,7 +478,7 @@ def clean_pdb(pdb_file):
     with open(pdb_file, 'w', encoding='utf-8') as f_out:
         f_out.writelines(relevant_lines)
 
-def zip_and_empty_folder(folder_path, extension):
+def zip_and_empty_folder(folder_path: str, extension: str) -> None:
     """Zip folder contents and empty the folder."""
     folder_basename = os.path.basename(folder_path)
     zip_filename = os.path.join(os.path.dirname(folder_path),
@@ -496,7 +497,7 @@ def zip_and_empty_folder(folder_path, extension):
     print(f"Files in folder '{folder_path}' have been zipped and removed.")
 
 # calculate averages for statistics
-def calculate_averages(statistics, handle_aa=False):  # pylint: disable=too-many-nested-blocks
+def calculate_averages(statistics: Dict[int, Dict[str, Any]], handle_aa: bool = False) -> Dict[str, Any]:  # pylint: disable=too-many-nested-blocks
     """Calculate averages for dataframe columns."""
     # Initialize a dictionary to hold the sums of each statistic
     sums = {}
@@ -538,12 +539,12 @@ def calculate_averages(statistics, handle_aa=False):  # pylint: disable=too-many
     if handle_aa:
         aa_averages = {aa: round(total / len(statistics), 2)
                       for aa, total in aa_sums.items()}
-        averages['InterfaceAAs'] = aa_averages
+        averages['InterfaceAAs'] = float(sum(aa_averages.values()) / len(aa_averages)) if aa_averages else 0.0
 
     return averages
 
 # filter designs based on feature thresholds
-def check_filters(mpnn_data, design_labels, filters):  # pylint: disable=too-many-branches
+def check_filters(mpnn_data: List[Any], design_labels: List[str], filters: Dict[str, Any]) -> Any:  # pylint: disable=too-many-branches
     """Check if design passes all specified filters."""
     # check mpnn_data against labels
     mpnn_dict = dict(zip(design_labels, mpnn_data))

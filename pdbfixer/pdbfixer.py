@@ -57,6 +57,7 @@ import os
 import os.path
 import math
 from collections import defaultdict
+from typing import Dict, List, Optional, Any, Tuple
 
 if sys.version_info >= (3,0):
     from urllib.request import urlopen
@@ -87,13 +88,13 @@ dnaResidues = ['DA', 'DG', 'DC', 'DT', 'DI']
 
 class Sequence(object):
     """Sequence holds the sequence of a chain, as specified by SEQRES records."""
-    def __init__(self, chainId, residues):
+    def __init__(self, chainId: str, residues: List[str]) -> None:
         self.chainId = chainId
         self.residues = residues
 
 class ModifiedResidue(object):
     """ModifiedResidue holds information about a modified residue, as specified by a MODRES record."""
-    def __init__(self, chainId, number, residueName, standardName):
+    def __init__(self, chainId: str, number: int, residueName: str, standardName: str) -> None:
         self.chainId = chainId
         self.number = number
         self.residueName = residueName
@@ -101,7 +102,7 @@ class ModifiedResidue(object):
 
 class Template:
     """Template represents a standard residue, or a nonstandard one registered with registerTemplate()."""
-    def __init__(self, topology, positions, terminal=None):
+    def __init__(self, topology: Any, positions: Any, terminal: Optional[List[bool]] = None) -> None:
         self.topology = topology
         self.positions = positions
         if terminal is None:
@@ -193,7 +194,7 @@ class CCDResidueDefinition:
 
         return cls(residueName=residueName, atoms=atoms, bonds=bonds)
 
-def _guessFileFormat(file, filename):
+def _guessFileFormat(file: Any, filename: str) -> str:
     """Guess whether a file is PDB or PDBx/mmCIF based on its filename and contents."""
     filename = filename.lower()
     if '.pdbx' in filename or '.cif' in filename:
@@ -213,7 +214,7 @@ def _guessFileFormat(file, filename):
     file.seek(0)
     return 'pdb'
 
-def _overlayPoints(points1, points2):
+def _overlayPoints(points1: List, points2: List) -> Tuple:
     """Given two sets of points, determine the translation and rotation that matches them as closely as possible.
 
     Parameters
@@ -258,7 +259,7 @@ def _overlayPoints(points1, points2):
     (u, s, v) = lin.svd(R)
     return (-1*center2, np.dot(u, v).transpose(), center1)
 
-def _dihedralRotation(points, angle):
+def _dihedralRotation(points: List[Any], angle: float) -> Any:
     """Given four points that form a dihedral, compute the matrix that rotates the last point around the axis to
     produce the desired dihedral angle."""
     points = [p.value_in_unit(unit.nanometer) for p in points]
@@ -277,7 +278,7 @@ def _dihedralRotation(points, angle):
         [axis[2]*axis[0]*(1-ct) - axis[1]*st,    axis[2]*axis[1]*(1-ct) + axis[0]*st,    axis[2]*axis[2]*(1-ct) + ct        ]
     ])
 
-def _findUnoccupiedDirection(point, positions):
+def _findUnoccupiedDirection(point: Any, positions: Any) -> Any:
     """Given a point in space and a list of atom positions, find the direction in which the local density of atoms is lowest."""
 
     point = point.value_in_unit(unit.nanometers)
@@ -295,7 +296,7 @@ class PDBFixer(object):
     """PDBFixer implements many tools for fixing problems in PDB and PDBx/mmCIF files.
     """
 
-    def __init__(self, filename=None, pdbfile=None, pdbxfile=None, url=None, pdbid=None, platform=None):
+    def __init__(self, filename: Optional[str] = None, pdbfile: Optional[Any] = None, pdbxfile: Optional[Any] = None, url: Optional[str] = None, pdbid: Optional[str] = None, platform: Optional[Any] = None) -> None:
         """Create a new PDBFixer instance to fix problems in a PDB or PDBx/mmCIF file.
 
         Parameters
@@ -387,7 +388,7 @@ class PDBFixer(object):
             raise Exception("Structure contains no atoms.")
 
         # Keep a cache of downloaded CCD definitions
-        self._ccdCache = {}
+        self._ccdCache: Dict[str, Any] = {}
 
         # Load the templates.
 
@@ -400,7 +401,7 @@ class PDBFixer(object):
             self.templates[name] = Template(templatePdb.topology, templatePdb.positions)
             self._standardTemplates.add(name)
 
-    def _initializeFromPDB(self, file):
+    def _initializeFromPDB(self, file: Any) -> None:
         """Initialize this object by reading a PDB file."""
 
         structure = PdbStructure(file)
@@ -410,7 +411,7 @@ class PDBFixer(object):
         self.sequences = [Sequence(s.chain_id, s.residues) for s in structure.sequences]
         self.modifiedResidues = [ModifiedResidue(r.chain_id, r.number, r.residue_name, r.standard_name) for r in structure.modified_residues]
 
-    def _initializeFromPDBx(self, file):
+    def _initializeFromPDBx(self, file: Any) -> None:
         """Initialize this object by reading a PDBx/mmCIF file."""
 
         pdbx = app.PDBxFile(file)
@@ -421,14 +422,14 @@ class PDBFixer(object):
 
         file.seek(0)
         reader = PdbxReader(file)
-        data = []
+        data: List[Any] = []
         reader.read(data)
         block = data[0]
 
         # Load the sequence data.
 
         sequenceData = block.getObj('entity_poly_seq')
-        sequences = {}
+        sequences: Dict[str, Any] = {}
         if sequenceData is not None:
             entityIdCol = sequenceData.getAttributeIndex('entity_id')
             residueCol = sequenceData.getAttributeIndex('mon_id')
@@ -507,13 +508,13 @@ class PDBFixer(object):
         self._ccdCache[residueName] = ccdDefinition
         return ccdDefinition
 
-    def _getTemplate(self, name):
+    def _getTemplate(self, name: str) -> Optional[Any]:
         """Return the template with a name.  If none has been registered, this will return None."""
         if name in self.templates:
             return self.templates[name]
         return None
 
-    def registerTemplate(self, topology, positions, terminal=None):
+    def registerTemplate(self, topology: Any, positions: Any, terminal: Optional[List[bool]] = None) -> None:
         """Register a template for a nonstandard residue.  This allows PDBFixer to add missing residues of this type,
         to add missing atoms to existing residues, and to mutate other residues to it.
         Parameters
@@ -538,7 +539,7 @@ class PDBFixer(object):
             raise ValueError('The number of terminal flags does not match the number of atoms in the Topology')
         self.templates[residues[0].name] = Template(topology, positions, terminal)
 
-    def downloadTemplate(self, name):
+    def downloadTemplate(self, name: str) -> bool:
         """Attempt to download a residue definition from the PDB and register a template for it.
 
         Parameters
@@ -578,7 +579,7 @@ class PDBFixer(object):
         self.registerTemplate(topology, positions, terminal)
         return True
 
-    def _addAtomsToTopology(self, heavyAtomsOnly, omitUnknownMolecules):
+    def _addAtomsToTopology(self, heavyAtomsOnly: bool, omitUnknownMolecules: bool) -> Tuple[Any, List[Any], List[Any], Dict[Any, Any]]:
         """Create a new Topology in which missing atoms have been added.
 
         Parameters
@@ -602,10 +603,10 @@ class PDBFixer(object):
         """
 
         newTopology = app.Topology()
-        newPositions = []*unit.nanometer
-        newAtoms = []
-        existingAtomMap = {}
-        addedAtomMap = {}
+        newPositions: List[Any] = []*unit.nanometer
+        newAtoms: List[Any] = []
+        existingAtomMap: Dict[Any, Any] = {}
+        addedAtomMap: Dict[Any, Dict[Any, Any]] = {}
         addedHeterogenBonds = []
         residueCenters = [self._computeResidueCenter(res).value_in_unit(unit.nanometers) for res in self.topology.residues()]*unit.nanometers
         for chain in self.topology.chains():
@@ -739,11 +740,11 @@ class PDBFixer(object):
 
         return (newTopology, newPositions, newAtoms, existingAtomMap)
 
-    def _computeResidueCenter(self, residue):
+    def _computeResidueCenter(self, residue: Any) -> Any:
         """Compute the centroid of a residue."""
         return unit.sum([self.positions[atom.index] for atom in residue.atoms()])/len(list(residue.atoms()))
 
-    def _addMissingResiduesToChain(self, chain, residueNames, startPosition, endPosition, loopDirection, orientTo, newAtoms, newPositions, firstIndex):
+    def _addMissingResiduesToChain(self, chain: Any, residueNames: List[str], startPosition: Any, endPosition: Any, loopDirection: Any, orientTo: Any, newAtoms: List[Any], newPositions: List[Any], firstIndex: int) -> None:
         """Add a series of residues to a chain."""
         orientToPositions = dict((atom.name, self.positions[atom.index]) for atom in orientTo.atoms())
         if loopDirection is None:
@@ -771,10 +772,11 @@ class PDBFixer(object):
 
             points1 = []
             points2 = []
-            for atom in template.topology.atoms():
-                if atom.name in orientToPositions:
-                    points1.append(orientToPositions[atom.name].value_in_unit(unit.nanometer))
-                    points2.append(template.positions[atom.index].value_in_unit(unit.nanometer))
+            if template is not None and hasattr(template, 'topology') and template.topology is not None and hasattr(template, 'positions') and template.positions is not None:
+                for atom in template.topology.atoms():
+                    if atom.name in orientToPositions:
+                        points1.append(orientToPositions[atom.name].value_in_unit(unit.nanometer))
+                        points2.append(template.positions[atom.index].value_in_unit(unit.nanometer))
             (translate2, rotate, translate1) = _overlayPoints(points1, points2)
 
             # Create the new residue.
@@ -782,7 +784,10 @@ class PDBFixer(object):
             newResidue = chain.topology.addResidue(residueName, chain, "%d" % ((firstIndex+i)%10000))
             fraction = (i+1.0)/(numResidues+1.0)
             translate = startPosition + (endPosition-startPosition)*fraction + loopHeight*math.sin(fraction*math.pi)*loopDirection
-            templateAtoms = list(template.topology.atoms())
+            if template is not None and hasattr(template, 'topology') and template.topology is not None:
+                templateAtoms = list(template.topology.atoms())
+            else:
+                templateAtoms = []
             if newResidue == next(chain.residues()):
                 templateAtoms = [atom for atom in templateAtoms if atom.name not in ('P', 'OP1', 'OP2')]
             for atom in templateAtoms:
@@ -807,7 +812,7 @@ class PDBFixer(object):
 
             prevResidue = newResidue
 
-    def _renameNewChains(self, startIndex):
+    def _renameNewChains(self, startIndex: int) -> None:
         """Rename newly added chains to conform with existing naming conventions.
 
         Parameters
@@ -826,7 +831,7 @@ class PDBFixer(object):
             if len(prevChainId) == 1 and "A" <= prevChainId < "Z":
                 chains[newChainIndex].id = chr(ord(prevChainId) + 1)
 
-    def removeChains(self, chainIndices=None, chainIds=None):
+    def removeChains(self, chainIndices: Optional[List[int]] = None, chainIds: Optional[List[str]] = None) -> None:
         """Remove a set of chains from the structure.
 
         Parameters
@@ -873,7 +878,7 @@ class PDBFixer(object):
 
         return
 
-    def findMissingResidues(self):
+    def findMissingResidues(self) -> None:
         """Find residues that are missing from the structure.
 
         The results are stored into the missingResidues field, which is a dict.  Each key is a tuple consisting of
@@ -926,7 +931,7 @@ class PDBFixer(object):
 
         # Now build the list of residues to add.
 
-        self.missingResidues = {}
+        self.missingResidues: Dict[Any, List[str]] = {}
         for chain in self.topology.chains():
             if chain in chainSequence:
                 offset = chainOffset[chain]
@@ -945,7 +950,7 @@ class PDBFixer(object):
                     else:
                         index += 1
 
-    def findNonstandardResidues(self):
+    def findNonstandardResidues(self) -> None:
         """Identify non-standard residues found in the structure, and select standard residues to replace them with.
 
         The results are stored into the nonstandardResidues field, which is a map of Residue objects to the names
@@ -980,7 +985,7 @@ class PDBFixer(object):
                         nonstandard[residue] = replacement
         self.nonstandardResidues = [(r, nonstandard[r]) for r in sorted(nonstandard, key=lambda r: r.index)]
 
-    def replaceNonstandardResidues(self):
+    def replaceNonstandardResidues(self) -> None:
         """Replace every residue listed in the nonstandardResidues field with the specified standard residue.
 
         Notes
@@ -1005,7 +1010,10 @@ class PDBFixer(object):
             for residue, replaceWith in self.nonstandardResidues:
                 residue.name = replaceWith
                 template = self._getTemplate(replaceWith)
-                standardAtoms = set(atom.name for atom in template.topology.atoms())
+                if template is not None and hasattr(template, 'topology') and template.topology is not None:
+                    standardAtoms = set(atom.name for atom in template.topology.atoms())
+                else:
+                    standardAtoms = set()
                 for atom in residue.atoms():
                     if atom.element in (None, hydrogen) or atom.name not in standardAtoms:
                         deleteAtoms.append(atom)
@@ -1018,7 +1026,7 @@ class PDBFixer(object):
             self.positions = modeller.positions
 
 
-    def applyMutations(self, mutations, chain_id):
+    def applyMutations(self, mutations: List[str], chain_id: str) -> None:
         """Apply a list of amino acid substitutions to make a mutant protein.
 
         Parameters
@@ -1095,7 +1103,10 @@ class PDBFixer(object):
                 replaceWith = residue_map[residue]
                 residue.name = replaceWith
                 template = self._getTemplate(replaceWith)
-                standardAtoms = set(atom.name for atom in template.topology.atoms())
+                if template is not None and hasattr(template, 'topology') and template.topology is not None:
+                    standardAtoms = set(atom.name for atom in template.topology.atoms())
+                else:
+                    standardAtoms = set()
                 for atom in residue.atoms():
                     if atom.element in (None, hydrogen) or atom.name not in standardAtoms:
                         deleteAtoms.append(atom)
@@ -1107,7 +1118,7 @@ class PDBFixer(object):
             self.positions = modeller.positions
 
 
-    def findMissingAtoms(self):
+    def findMissingAtoms(self) -> None:
         """Find heavy atoms that are missing from the structure.
 
         The results are stored into two fields: missingAtoms and missingTerminals.  Each of these is a dict whose keys
@@ -1161,7 +1172,7 @@ class PDBFixer(object):
             chainResidues = list(chain.residues())
             for residue in chain.residues():
                 template = self._getTemplate(residue.name)
-                if template is not None:
+                if template is not None and template.topology is not None and template.positions is not None:
                     # If an atom is marked as terminal only, and if it is bonded to any atom that has an external bond
                     # to another residue, we need to omit that atom and any other terminal-only atom bonded to it.
 
@@ -1187,7 +1198,7 @@ class PDBFixer(object):
 
                     # Add atoms from the template that are missing.
 
-                    missing = []
+                    missing: List[Any] = []
                     for atom in templateAtoms:
                         if atom.name not in atomNames and atom.element != app.element.hydrogen:
                             missing.append(atom)
@@ -1206,7 +1217,7 @@ class PDBFixer(object):
         self.missingAtoms = missingAtoms
         self.missingTerminals = missingTerminals
 
-    def addMissingAtoms(self, seed=None):
+    def addMissingAtoms(self, seed: Optional[int] = None) -> None:
         """Add all missing heavy atoms, as specified by the missingAtoms, missingTerminals, and missingResidues fields.
 
         Parameters
@@ -1332,7 +1343,7 @@ class PDBFixer(object):
             self.topology = newTopology2
             self.positions = newPositions2
 
-    def removeHeterogens(self, keepWater=True):
+    def removeHeterogens(self, keepWater: bool = True) -> None:
         """Remove all heterogens from the structure.
 
         Parameters
@@ -1367,9 +1378,9 @@ class PDBFixer(object):
         modeller.delete(toDelete)
         self.topology = modeller.topology
         self.positions = modeller.positions
-        return toDelete
+        return None
 
-    def addMissingHydrogens(self, pH=7.0, forcefield=None):
+    def addMissingHydrogens(self, pH: float = 7.0, forcefield=None) -> None:
         """Add missing hydrogen atoms to the structure.
 
         Parameters
@@ -1399,7 +1410,7 @@ class PDBFixer(object):
         self.topology = modeller.topology
         self.positions = modeller.positions
 
-    def _downloadNonstandardDefinitions(self):
+    def _downloadNonstandardDefinitions(self) -> Dict:
         """If the file contains any nonstandard residues, download their definitions and build
         the information needed to add hydrogens to them.
         """
@@ -1419,7 +1430,7 @@ class PDBFixer(object):
                 definitions[name] = (atoms, bonds)
         return definitions
 
-    def _describeVariant(self, residue, definitions):
+    def _describeVariant(self, residue: Any, definitions: Dict[str, Any]) -> Optional[List[Any]]:
         """Build the variant description to pass to addHydrogens() for a residue."""
         if residue.name not in self._standardTemplates and self._getTemplate(residue.name) is not None:
             # The user has registered a template for this residue.  Use the hydrogens from it.
@@ -1482,7 +1493,7 @@ class PDBFixer(object):
             variant.append((h, parent))
         return variant
 
-    def addSolvent(self, boxSize=None, padding=None, boxVectors=None, positiveIon='Na+', negativeIon='Cl-', ionicStrength=0*unit.molar, boxShape='cube', forceField=None):
+    def addSolvent(self, boxSize: Optional[Any] = None, padding: Optional[Any] = None, boxVectors: Optional[Any] = None, positiveIon: str = 'Na+', negativeIon: str = 'Cl-', ionicStrength: Any = 0*unit.molar, boxShape: str = 'cube', forceField: Optional[Any] = None) -> None:
         """Add a solvent box surrounding the structure.
 
         Parameters
@@ -1530,7 +1541,7 @@ class PDBFixer(object):
         self.positions = modeller.positions
         self._renameNewChains(nChains)
 
-    def addMembrane(self, lipidType='POPC', membraneCenterZ=0*unit.nanometer, minimumPadding=1*unit.nanometer, positiveIon='Na+', negativeIon='Cl-', ionicStrength=0*unit.molar):
+    def addMembrane(self, lipidType: str = 'POPC', membraneCenterZ: Any = 0*unit.nanometer, minimumPadding: Any = 1*unit.nanometer, positiveIon: str = 'Na+', negativeIon: str = 'Cl-', ionicStrength: Any = 0*unit.molar) -> None:
         """Add a lipid membrane to the structure.
 
         This method adds both lipids and water, so you should call either addSolvent() or addMembrane(),
@@ -1581,7 +1592,7 @@ class PDBFixer(object):
             if includeLeavingAtoms or not atom.leaving
         }
 
-    def _createForceField(self, newTopology, water):
+    def _createForceField(self, newTopology: Any, water: bool) -> Any:
         """Create a force field to use for optimizing the positions of newly added atoms."""
 
         if water:
@@ -1596,7 +1607,7 @@ class PDBFixer(object):
         # If so, we need to create new templates for them.
 
         atomTypes = {}
-        bondedToAtom = []
+        bondedToAtom: List[List[int]] = []
         for atom in newTopology.atoms():
             bondedToAtom.append(set())
         for atom1, atom2 in newTopology.bonds():
@@ -1618,7 +1629,7 @@ class PDBFixer(object):
             forcefield._templates[resName] = template
             indexInResidue = {}
             # If we can't find formal charges in the CCD, make everything uncharged
-            formalCharges = defaultdict(int)
+            formalCharges: Dict[str, int] = defaultdict(int)
             # See if we can get formal charges from the CCD
             if water:
                 # The formal charges in the CCD can only be relied on if the
@@ -1675,7 +1686,7 @@ class PDBFixer(object):
                 forcefield._templateSignatures[signature] = [template]
         return forcefield
 
-    def _findNearestDistance(self, context, newAtoms, cutoff, exclusions):
+    def _findNearestDistance(self, context: Any, newAtoms: List[Any], cutoff: float, exclusions: Any) -> float:
         """Given a set of newly added atoms, find the closest distance between one of those atoms and another atom."""
 
         positions = context.getState(getPositions=True).getPositions(asNumpy=True).value_in_unit(unit.nanometer)
@@ -1691,4 +1702,4 @@ class PDBFixer(object):
                     dist_squared = np.dot(p, p)
                     if dist_squared < nearest_squared:
                         nearest_squared = dist_squared
-        return np.sqrt(nearest_squared)
+        return float(np.sqrt(nearest_squared))

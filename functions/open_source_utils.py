@@ -3,6 +3,7 @@
 # Open-Source Utilities
 #
 import os
+from typing import Dict, Tuple, Any
 from Bio.PDB import PDBParser, SASA, PDBIO, Superimposer
 from prody import (parsePDB, Interactions, showPairEnergy)
 from openmm import app
@@ -10,7 +11,7 @@ from pdbfixer import PDBFixer
 from .generic_utils import clean_pdb
 
 
-def openmm_relax(pdb_file, relaxed_pdb_path):  # pylint: disable=too-many-locals
+def openmm_relax(pdb_file: str, relaxed_pdb_path: str) -> None:  # pylint: disable=too-many-locals
     """
     Performs energy minimization on a protein structure using PDBFixer.
     """
@@ -27,7 +28,7 @@ def openmm_relax(pdb_file, relaxed_pdb_path):  # pylint: disable=too-many-locals
         clean_pdb(relaxed_pdb_path)
 
 
-def align_pdbs(reference_pdb, align_pdb, reference_chain_id, align_chain_id):  # pylint: disable=too-many-locals
+def align_pdbs(reference_pdb: str, align_pdb: str, reference_chain_id: str, align_chain_id: str) -> None:  # pylint: disable=too-many-locals
     """
     Aligns two PDB structures using Bio.PDB.Superimposer.
     """
@@ -66,8 +67,8 @@ def align_pdbs(reference_pdb, align_pdb, reference_chain_id, align_chain_id):  #
     clean_pdb(align_pdb)
 
 
-def unaligned_rmsd(reference_pdb, align_pdb,  # pylint: disable=too-many-locals
-                   reference_chain_id, align_chain_id):
+def unaligned_rmsd(reference_pdb: str, align_pdb: str,  # pylint: disable=too-many-locals
+                   reference_chain_id: str, align_chain_id: str) -> float:
     """
     Calculates the RMSD between two chains without prior alignment.
     """
@@ -99,10 +100,10 @@ def unaligned_rmsd(reference_pdb, align_pdb,  # pylint: disable=too-many-locals
     super_imposer = Superimposer()
     super_imposer.set_atoms(ref_atoms, sample_atoms)
 
-    return round(super_imposer.rms, 2)
+    return float(round(super_imposer.rms, 2))
 
 
-def score_interface(pdb_file, binder_chain="B"):  # pylint: disable=too-many-locals,too-many-branches,too-many-statements
+def score_interface(pdb_file: str, binder_chain: str = "B") -> Tuple[Dict[str, float], Dict[str, int], str]:  # pylint: disable=too-many-locals,too-many-branches,too-many-statements
     """
     Calculates interface scores using a combination of ProDy and BioPython.
     """
@@ -149,7 +150,7 @@ def score_interface(pdb_file, binder_chain="B"):  # pylint: disable=too-many-loc
                     hydrophobic_count += 1
 
         if interface_nres != 0:
-            interface_hydrophobicity = (hydrophobic_count / interface_nres) * 100
+            interface_hydrophobicity = int((hydrophobic_count / interface_nres) * 100)
         else:
             interface_hydrophobicity = 0
 
@@ -191,24 +192,24 @@ def score_interface(pdb_file, binder_chain="B"):  # pylint: disable=too-many-loc
     # Isolate chains for individual SASA calculation
     class ChainSelect:
         """Chain selector for SASA calculations."""
-        def __init__(self, chain_id):
+        def __init__(self, chain_id: str) -> None:
             self.chain_id = chain_id
 
-        def accept_model(self, _model):
+        def accept_model(self, _model: Any) -> int:
             """Accept all models."""
             return 1
 
-        def accept_chain(self, chain):
+        def accept_chain(self, chain: Any) -> int:
             """Accept chains matching the specified chain ID."""
             if chain.get_id() == self.chain_id:
                 return 1
             return 0
 
-        def accept_residue(self, _residue):
+        def accept_residue(self, _residue: Any) -> int:
             """Accept all residues."""
             return 1
 
-        def accept_atom(self, _atom):
+        def accept_atom(self, _atom: Any) -> int:
             """Accept all atoms."""
             return 1
 
