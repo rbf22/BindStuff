@@ -2,8 +2,7 @@
 # Open-Source Utilities
 #
 import os
-from prody import (parsePDB, superpose, applyTransformation,
-                   writePDB, calcRMSD, Interactions, showPairEnergy)
+from prody import (parsePDB, Interactions, showPairEnergy)
 from openmm import app
 from pdbfixer import PDBFixer
 from Bio.PDB import PDBParser, SASA, PDBIO, Superimposer
@@ -108,6 +107,8 @@ def score_interface(pdb_file, binder_chain="B"):
     """
     # Load structure with ProDy for interaction analysis
     structure = parsePDB(pdb_file)
+    if structure is None:
+        return {}, {}, ""
 
     # Define target and binder selections
     target_chain = "A"  # Assuming target is always chain A
@@ -154,18 +155,22 @@ def score_interface(pdb_file, binder_chain="B"):
     # --- Hydrogen Bonds and Interaction Energy (ProDy InSty) ---
     try:
         interactions = Interactions(structure)
-        interactions.calcProteinInteractions(structure)
-        hbonds = interactions.getHydrogenBonds(
-            selection=f"chain {target_chain}", selection2=f"chain {binder_chain}"
-        )
-        interface_interface_hbonds = len(hbonds) if hbonds is not None else 0
+        if interactions is not None:
+            interactions.calcProteinInteractions(structure)
+            hbonds = interactions.getHydrogenBonds(
+                selection=f"chain {target_chain}", selection2=f"chain {binder_chain}"
+            )
+            interface_interface_hbonds = len(hbonds) if hbonds is not None else 0
 
-        # As a proxy for dG, we can sum the energies of the hydrogen bonds
-        # Note: This is a very rough approximation
-        if hbonds:
-            showPairEnergy(hbonds)
-            interface_dg = sum(hbond[-1] for hbond in hbonds)
+            # As a proxy for dG, we can sum the energies of the hydrogen bonds
+            # Note: This is a very rough approximation
+            if hbonds:
+                showPairEnergy(hbonds)
+                interface_dg = sum(hbond[-1] for hbond in hbonds)
+            else:
+                interface_dg = 0
         else:
+            interface_interface_hbonds = 0
             interface_dg = 0
 
     except Exception:  # pylint: disable=broad-except-clause
@@ -175,6 +180,8 @@ def score_interface(pdb_file, binder_chain="B"):
     # --- SASA Calculation (BioPython) ---
     parser = PDBParser(QUIET=True)
     bp_structure = parser.get_structure("s", pdb_file)
+    if bp_structure is None:
+        return {}, {}, ""
     sr = SASA.ShrakeRupley()
     sr.compute(bp_structure, level="S")
 
@@ -192,6 +199,12 @@ def score_interface(pdb_file, binder_chain="B"):
             if chain.get_id() == self.chain_id:
                 return 1
             return 0
+
+        def accept_residue(self, residue):
+            return 1
+
+        def accept_atom(self, atom):
+            return 1
 
     io = PDBIO()
     io.set_structure(bp_structure)
@@ -221,13 +234,14 @@ def score_interface(pdb_file, binder_chain="B"):
     # As a proxy for binder_score, we calculate the total intra-chain
     # interaction energy of the binder
     binder_only_structure = structure.select(f"chain {binder_chain}")
-    binder_interactions = Interactions(binder_only_structure)
-    binder_interactions.calcProteinInteractions(binder_only_structure)
-    all_binder_hbonds = binder_interactions.getHydrogenBonds()
     binder_score = 0
-    if all_binder_hbonds:
-        showPairEnergy(all_binder_hbonds)
-        binder_score = sum(hbond[-1] for hbond in all_binder_hbonds)
+    if binder_only_structure is not None:
+        binder_interactions = Interactions(binder_only_structure)
+        binder_interactions.calcProteinInteractions(binder_only_structure)
+        all_binder_hbonds = binder_interactions.getHydrogenBonds()
+        if all_binder_hbonds:
+            showPairEnergy(all_binder_hbonds)
+            binder_score = sum(hbond[-1] for hbond in all_binder_hbonds)
 
     # Surface Hydrophobicity
     # Placeholder, as this is complex to calculate accurately

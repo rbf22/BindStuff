@@ -9,33 +9,28 @@ packages = [{include = "pdbfixer"}]
 [tool.poetry.dependencies]
 python = ">=3.11"
 openmm = "^8.0"
-numpy = "^1.20"
+numpy = "^2.1.0"
 pandas = "^2.3.2"
 matplotlib = "^3.10.5"
 scipy = "^1.16.1"
-seaborn = "^0.13.2"
-tqdm = "^4.67.1"
-jupyter = "^1.1.1"
-ffmpeg = "^1.4"
-fsspec = "^2025.7.0"
-py3dmol = "^2.5.2"
-chex = "^0.1.90"
 prody = "^2.4.0"
-dm-haiku = "^0.0.14"
-flax = "<0.10.0"
-dm-tree = "^0.1.9"
-joblib = "^1.5.2"
-ml-collections = "^1.1.0"
-immutabledict = "^4.2.1"
-optax = "^0.2.5"
 jax = ">=0.4,<=0.6.0"
-jaxlib = ">=0.4,<=0.6.0"
 colabdesign = {git = "https://github.com/sokrypton/ColabDesign.git"}
+biopython = "^1.81"
+pytest = "^8.4.1"
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^8.4.1"
 ruff = "^0.12.11"
 pytest-cov = "^5.0.0"
+pylint = "^3.2.6"
+deptry = "^0.17.0"
+
+[tool.mypy]
+ignore_missing_imports = true
+
+[tool.deptry]
+ignore = ["DEP001"]
+exclude = ["notebooks"]
 
 [build-system]
 requires = ["poetry-core"]
