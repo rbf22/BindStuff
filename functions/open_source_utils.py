@@ -4,106 +4,65 @@
 import os
 from prody import (parsePDB, superpose, applyTransformation,
                    writePDB, calcRMSD, Interactions, showPairEnergy)
-from openmm.app import (PDBFile, ForceField, NoCutoff,
-                        HBonds, Simulation)
-from openmm import CustomExternalForce, LangevinIntegrator
-from openmm import unit
-from Bio.PDB import PDBParser, SASA, PDBIO
+from openmm import app
+from pdbfixer import PDBFixer
+from Bio.PDB import PDBParser, SASA, PDBIO, Superimposer
 from .generic_utils import clean_pdb
 
 
 def openmm_relax(pdb_file, relaxed_pdb_path):
     """
-    Performs energy minimization on a protein structure using OpenMM.
+    Performs energy minimization on a protein structure using PDBFixer.
     """
     if not os.path.exists(relaxed_pdb_path):
-        # Load PDB using OpenMM
-        pdb = PDBFile(pdb_file)
-
-        # Load PDB using ProDy for alignment and b-factors
-        original_structure = parsePDB(pdb_file)
-
-        # Setup ForceField
-        forcefield = ForceField("amber14-all.xml", "amber14/tip3pfb.xml")
-
-        # Create system
-        system = forcefield.createSystem(
-            pdb.topology, nonbondedMethod=NoCutoff, constraints=HBonds
-        )
-
-        # Add position restraints to heavy atoms
-        restraint = CustomExternalForce("k*((x-x0)^2+(y-y0)^2+(z-z0)^2)")
-        restraint.addPerParticleParameter("k")
-        restraint.addPerParticleParameter("x0")
-        restraint.addPerParticleParameter("y0")
-        restraint.addPerParticleParameter("z0")
-        system.addForce(restraint)
-        for atom in pdb.topology.atoms():
-            if atom.element.symbol != "H":
-                pos = pdb.positions[atom.index]
-                restraint.addParticle(
-                    atom.index,
-                    [
-                        10.0 * unit.kilocalories_per_mole / unit.angstrom**2,
-                        pos[0],
-                        pos[1],
-                        pos[2],
-                    ],
-                )
-
-        # Create integrator
-        integrator = LangevinIntegrator(
-            300 * unit.kelvin, 1 / unit.picosecond, 0.002 * unit.picoseconds
-        )
-
-        # Create simulation
-        simulation = Simulation(pdb.topology, system, integrator)
-        simulation.context.setPositions(pdb.positions)
-
-        # Minimize energy
-        simulation.minimizeEnergy(maxIterations=200)
-
-        # Get relaxed state
-        state = simulation.context.getState(getPositions=True)
-        relaxed_positions = state.getPositions()
-
-        # Create a ProDy object for the relaxed structure
-        relaxed_structure = original_structure.copy()
-        relaxed_structure.setCoords(relaxed_positions.value_in_unit(unit.angstrom))
-
-        # Align relaxed structure to original
-        superpose(relaxed_structure, original_structure)
-
-        # Copy B-factors
-        relaxed_structure.setBetas(original_structure.getBetas())
-
-        # Write relaxed PDB
-        writePDB(relaxed_pdb_path, relaxed_structure)
-
+        fixer = PDBFixer(filename=pdb_file)
+        fixer.findMissingResidues()
+        fixer.findNonstandardResidues()
+        fixer.replaceNonstandardResidues()
+        fixer.findMissingAtoms()
+        fixer.addMissingAtoms()
+        fixer.addMissingHydrogens(7.0)
+        with open(relaxed_pdb_path, "w") as f:
+            app.PDBFile.writeFile(fixer.topology, fixer.positions, f, keepIds=True)
         clean_pdb(relaxed_pdb_path)
 
 
 def align_pdbs(reference_pdb, align_pdb, reference_chain_id, align_chain_id):
     """
-    Aligns two PDB structures using ProDy.
+    Aligns two PDB structures using Bio.PDB.Superimposer.
     """
-    ref_struct = parsePDB(reference_pdb)
-    align_struct = parsePDB(align_pdb)
+    pdb_parser = PDBParser(QUIET=True)
+    ref_structure = pdb_parser.get_structure("reference", reference_pdb)
+    sample_structure = pdb_parser.get_structure("sample", align_pdb)
 
-    ref_sel_str = f'chain {reference_chain_id.split(",")[0]}'
-    align_sel_str = f'chain {align_chain_id.split(",")[0]}'
+    ref_model = ref_structure[0]
+    sample_model = sample_structure[0]
 
-    ref_sel = ref_struct.select(ref_sel_str)
-    align_sel = align_struct.select(align_sel_str)
+    ref_atoms = []
+    sample_atoms = []
 
-    # Perform alignment
-    transformation = superpose(align_sel, ref_sel)
+    for ref_chain in ref_model:
+        if ref_chain.id in reference_chain_id.split(','):
+            for ref_res in ref_chain:
+                if 'CA' in ref_res:
+                    ref_atoms.append(ref_res['CA'])
 
-    # Apply transformation to the whole structure to be aligned
-    applyTransformation(transformation, align_struct)
+    for sample_chain in sample_model:
+        if sample_chain.id in align_chain_id.split(','):
+            for sample_res in sample_chain:
+                if 'CA' in sample_res:
+                    sample_atoms.append(sample_res['CA'])
 
-    # Save the aligned structure
-    writePDB(align_pdb, align_struct)
+    if len(ref_atoms) != len(sample_atoms):
+        raise ValueError("Cannot align structures with different number of atoms.")
+
+    super_imposer = Superimposer()
+    super_imposer.set_atoms(ref_atoms, sample_atoms)
+    super_imposer.apply(sample_model.get_atoms())
+
+    io = PDBIO()
+    io.set_structure(sample_structure)
+    io.save(align_pdb)
     clean_pdb(align_pdb)
 
 
@@ -112,14 +71,35 @@ def unaligned_rmsd(reference_pdb, align_pdb,
     """
     Calculates the RMSD between two chains without prior alignment.
     """
-    ref_struct = parsePDB(reference_pdb)
-    align_struct = parsePDB(align_pdb)
+    pdb_parser = PDBParser(QUIET=True)
+    ref_structure = pdb_parser.get_structure("reference", reference_pdb)
+    sample_structure = pdb_parser.get_structure("sample", align_pdb)
 
-    ref_sel = ref_struct.select(f'chain {reference_chain_id} and name CA')
-    align_sel = align_struct.select(f'chain {align_chain_id} and name CA')
+    ref_model = ref_structure[0]
+    sample_model = sample_structure[0]
 
-    rmsd = calcRMSD(align_sel, ref_sel)
-    return round(rmsd, 2)
+    ref_atoms = []
+    sample_atoms = []
+
+    for ref_chain in ref_model:
+        if ref_chain.id in reference_chain_id.split(','):
+            for ref_res in ref_chain:
+                if 'CA' in ref_res:
+                    ref_atoms.append(ref_res['CA'])
+
+    for sample_chain in sample_model:
+        if sample_chain.id in align_chain_id.split(','):
+            for sample_res in sample_chain:
+                if 'CA' in sample_res:
+                    sample_atoms.append(sample_res['CA'])
+
+    if len(ref_atoms) != len(sample_atoms):
+        raise ValueError("Cannot calculate RMSD for structures with different number of atoms.")
+
+    super_imposer = Superimposer()
+    super_imposer.set_atoms(ref_atoms, sample_atoms)
+
+    return round(super_imposer.rms, 2)
 
 
 def score_interface(pdb_file, binder_chain="B"):
@@ -204,6 +184,9 @@ def score_interface(pdb_file, binder_chain="B"):
     class ChainSelect:
         def __init__(self, chain_id):
             self.chain_id = chain_id
+
+        def accept_model(self, model):
+            return 1
 
         def accept_chain(self, chain):
             if chain.get_id() == self.chain_id:
