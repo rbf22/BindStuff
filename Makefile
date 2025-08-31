@@ -6,8 +6,6 @@ install: install-system-deps dev-install download-params
 dev-install:
 	sudo apt update
 	poetry install
-	chmod +x functions/dssp
-	chmod +x functions/DAlphaBall.gcc
 
 download-params:
 	@echo "Downloading AlphaFold2 parameters..."
