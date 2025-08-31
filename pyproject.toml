@@ -39,6 +39,7 @@ joblib = "*"
 ml-collections = "*"
 immutabledict = "*"
 optax = "*"
+click = "^8.2.1"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.12.11"

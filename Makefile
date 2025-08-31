@@ -6,8 +6,6 @@ install: install-system-deps dev-install download-params
 dev-install:
 	sudo apt update
 	poetry install
-	chmod +x functions/dssp
-	chmod +x functions/DAlphaBall.gcc
 
 download-params:
 	@echo "Downloading AlphaFold2 parameters..."
@@ -22,7 +20,7 @@ install-system-deps:
 	sudo apt-get install -y libgfortran5 ffmpeg
 
 run-tests:
-	poetry run pytest --cov=functions --cov-report=term-missing
+	JAX_PLATFORM_NAME=cpu poetry run pytest --cov=functions --cov-report=term-missing
 
 run-linter:
 	poetry run ruff check .
