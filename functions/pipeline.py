@@ -31,8 +31,8 @@ from functions.biopython_utils import (
     target_pdb_rmsd,
     calculate_clash_score,
     calc_ss_percentage,
-    score_interface,
 )
+from functions.scoring import score_interface
 from functions.open_source_utils import (
     unaligned_rmsd,
     openmm_relax as pr_relax,

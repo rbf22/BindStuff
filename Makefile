@@ -38,3 +38,7 @@ run-mypy:
 
 run-deptry:
 	poetry run deptry .
+
+Jules: install-system-deps download-params
+	chmod +x functions/dssp
+	chmod +x functions/DAlphaBall.gcc

@@ -6,7 +6,6 @@ import zipfile
 from unittest.mock import patch, MagicMock
 
 import pandas as pd
-import numpy as np
 
 from functions import generic_utils
 
@@ -161,7 +160,7 @@ def test_perform_advanced_settings_check():
     }
 
     adv_set_local = generic_utils.perform_advanced_settings_check(adv_set, "test_folder")
-    assert adv_set_local["af_params_dir"] == "test_folder"
+    assert adv_set_local["af_params_dir"] == os.path.join("test_folder", "params")
     assert adv_set_local["omit_AAs"] is None
 
 def test_load_json_settings():
