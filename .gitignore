@@ -4,6 +4,12 @@
 *$py.class
 poetry.lock
 
+# stupid large data files
+params/
+
+# output designs
+examples/designs
+
 # C extensions
 *.so
 
