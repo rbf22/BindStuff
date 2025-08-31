@@ -1,10 +1,8 @@
 """Tests for the colabdesign_utils module."""
-import os
 import tempfile
 from unittest.mock import MagicMock, patch
 
 import numpy as np
-import pytest
 
 from functions import colabdesign_utils
 

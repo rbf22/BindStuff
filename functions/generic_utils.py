@@ -394,13 +394,13 @@ def perform_advanced_settings_check(advanced_settings: Dict[str, Any], bindstuff
         advanced_settings["dalphaball_path"] = "/content/bindstuff/functions/DAlphaBall.gcc"
     else:
         # Set paths individually if they are not already set
-        if not advanced_settings["af_params_dir"]:
-            advanced_settings["af_params_dir"] = bindstuff_folder
-        if not advanced_settings["dssp_path"]:
+        if "af_params_dir" not in advanced_settings or not advanced_settings["af_params_dir"]:
+            advanced_settings["af_params_dir"] = os.path.join(bindstuff_folder, "params")
+        if "dssp_path" not in advanced_settings or not advanced_settings["dssp_path"]:
             advanced_settings["dssp_path"] = os.path.join(
                 bindstuff_folder, "functions", "dssp"
             )
-        if not advanced_settings["dalphaball_path"]:
+        if "dalphaball_path" not in advanced_settings or not advanced_settings["dalphaball_path"]:
             advanced_settings["dalphaball_path"] = os.path.join(
                 bindstuff_folder, "functions", "DAlphaBall.gcc"
             )
@@ -592,13 +592,15 @@ def check_filters(mpnn_data: List[Any], design_labels: List[str], filters: Dict[
         return True
     return unmet_conditions
 
-def create_target_settings_from_form(design_path, binder_name, starting_pdb, chains, target_hotspot_residues, lengths, number_of_final_designs, load_previous_target_settings):
+from typing import Any, Dict, List, Tuple
+
+def create_target_settings_from_form(design_path: str, binder_name: str, starting_pdb: str, chains: str, target_hotspot_residues: str, lengths: str, number_of_final_designs: int, load_previous_target_settings: str) -> str:
     """Creates a target settings dictionary from form inputs."""
     if load_previous_target_settings:
         return load_previous_target_settings
 
-    lengths = [int(x.strip()) for x in lengths.split(',') if len(lengths.split(',')) == 2]
-    if len(lengths) != 2:
+    lengths_list = [int(x.strip()) for x in lengths.split(',') if len(lengths.split(',')) == 2]
+    if len(lengths_list) != 2:
         raise ValueError("Incorrect specification of binder lengths.")
 
     settings = {
@@ -607,19 +609,19 @@ def create_target_settings_from_form(design_path, binder_name, starting_pdb, cha
         "starting_pdb": starting_pdb,
         "chains": chains,
         "target_hotspot_residues": target_hotspot_residues,
-        "lengths": lengths,
+        "lengths": lengths_list,
         "number_of_final_designs": number_of_final_designs
     }
 
     target_settings_path = os.path.join(design_path, binder_name + ".json")
     os.makedirs(design_path, exist_ok=True)
 
-    with open(target_settings_path, 'w') as f:
+    with open(target_settings_path, 'w', encoding='utf-8') as f:
         json.dump(settings, f, indent=4)
 
     return target_settings_path
 
-def get_advanced_settings_path_from_form(design_protocol, interface_protocol, template_protocol, prediction_protocol):
+def get_advanced_settings_path_from_form(design_protocol: str, interface_protocol: str, template_protocol: str, prediction_protocol: str) -> str:
     """Gets the advanced settings path from form inputs."""
     if design_protocol == "Default":
         design_protocol_tag = "default_4stage_multimer"
@@ -654,19 +656,19 @@ def get_advanced_settings_path_from_form(design_protocol, interface_protocol, te
         else:
             raise ValueError("Unsupported prediction protocol")
 
-    return "/content/bindstuff/settings_advanced/" + design_protocol_tag + interface_protocol_tag + template_protocol_tag + prediction_protocol_tag + ".json"
+    filename = design_protocol_tag + interface_protocol_tag + template_protocol_tag + prediction_protocol_tag + ".json"
+    return os.path.join("settings_advanced", filename)
 
-def get_filter_settings_path_from_form(filter_option):
+def get_filter_settings_path_from_form(filter_option: str) -> str:
     """Gets the filter settings path from form inputs."""
     if filter_option == "Default":
-        return "/content/bindstuff/settings_filters/default_filters.json"
-    elif filter_option == "Peptide":
-        return "/content/bindstuff/settings_filters/peptide_filters.json"
-    elif filter_option == "Relaxed":
-        return "/content/bindstuff/settings_filters/relaxed_filters.json"
-    elif filter_option == "Peptide_Relaxed":
-        return "/content/bindstuff/settings_filters/peptide_relaxed_filters.json"
-    elif filter_option == "None":
-        return "/content/bindstuff/settings_filters/no_filters.json"
-    else:
-        raise ValueError("Unsupported filter type")
+        return "settings_filters/default_filters.json"
+    if filter_option == "Peptide":
+        return "settings_filters/peptide_filters.json"
+    if filter_option == "Relaxed":
+        return "settings_filters/relaxed_filters.json"
+    if filter_option == "Peptide_Relaxed":
+        return "settings_filters/peptide_relaxed_filters.json"
+    if filter_option == "None":
+        return "settings_filters/no_filters.json"
+    raise ValueError("Unsupported filter type")
