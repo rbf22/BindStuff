@@ -35,9 +35,11 @@ AROMATIC_AA = set('FHWY')
 def _get_structure_sasa(structure):
     """Calculates SASA for a structure using the best available method."""
     if SASA_METHOD == "freesasa":
-        sasa_result, sasa_classes = freesasa.calcBioPDB(structure)
-        for atom in structure.get_atoms():
-            atom.sasa = sasa_result.atomArea(sasa_classes.atomSerialNumber(atom.serial_number))
+        sasa_result, _ = freesasa.calcBioPDB(structure)
+        atoms = list(structure.get_atoms())
+        atom_map = {atom.serial_number: i for i, atom in enumerate(atoms)}
+        for atom in atoms:
+            atom.sasa = sasa_result.atomArea(atom_map[atom.serial_number])
     else:
         sr = ShrakeRupley()
         sr.compute(structure, level="A")

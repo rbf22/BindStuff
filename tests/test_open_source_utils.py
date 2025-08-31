@@ -1,7 +1,6 @@
 """
 Tests for the open_source_utils module.
 """
-import os
 import shutil
 import pytest
 from functions import open_source_utils
