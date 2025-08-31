@@ -22,7 +22,7 @@ install-system-deps:
 	sudo apt-get install -y libgfortran5 ffmpeg
 
 run-tests:
-	poetry run pytest --cov=functions --cov-report=term-missing
+	JAX_PLATFORM_NAME=cpu poetry run pytest --cov=functions --cov-report=term-missing
 
 run-linter:
 	poetry run ruff check .
