@@ -5,8 +5,6 @@ with function signatures matching the original PyRosetta-based implementation.
 from . import scoring
 from . import struct_utils
 from . import relax_wrapper
-from pdbfixer import PDBFixer
-from openmm import app
 
 def score_interface(pdb_file, binder_chain="B"):
     """

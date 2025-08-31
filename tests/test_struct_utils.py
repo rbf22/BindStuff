@@ -1,7 +1,6 @@
 """
 Tests for the struct_utils module.
 """
-import os
 import shutil
 import pytest
 from functions import struct_utils
