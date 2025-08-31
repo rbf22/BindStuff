@@ -4,11 +4,16 @@ version = "0.1.0"
 description = "Protein binder design pipeline"
 authors = ["No author specified"]
 readme = "README.md"
+packages = [
+    { include = "alphafold" },
+    { include = "functions" },
+    { include = "scripts" },
+]
 
 [tool.poetry.dependencies]
 python = ">=3.11"
 openmm = "^8.0"
-numpy = "^2.1.0"
+numpy = ">=2.1"
 pandas = "^2.3.2"
 matplotlib = "^3.10.5"
 scipy = "^1.16.1"
@@ -23,6 +28,17 @@ dm-haiku = "0.0.12"
 tensorflow = "^2.15.0"
 dm-tree = "^0.1.8"
 freesasa = "^2.1.0"
+seaborn = "*"
+tqdm = "*"
+jupyter = "*"
+fsspec = "*"
+py3dmol = "*"
+chex = "*"
+flax = "<0.10.0"
+joblib = "*"
+ml-collections = "*"
+immutabledict = "*"
+optax = "*"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.12.11"

@@ -385,24 +385,24 @@ def perform_input_check(args: Any) -> Tuple[str, str, str]:
 
 
 # check specific advanced settings
-def perform_advanced_settings_check(advanced_settings: Dict[str, Any], bindcraft_folder: str) -> Dict[str, Any]:
+def perform_advanced_settings_check(advanced_settings: Dict[str, Any], bindstuff_folder: str) -> Dict[str, Any]:
     """Perform advanced settings validation checks."""
     # set paths to model weights and executables
-    if bindcraft_folder == "colab":
-        advanced_settings["af_params_dir"] = "/content/bindcraft/params/"
-        advanced_settings["dssp_path"] = "/content/bindcraft/functions/dssp"
-        advanced_settings["dalphaball_path"] = "/content/bindcraft/functions/DAlphaBall.gcc"
+    if bindstuff_folder == "colab":
+        advanced_settings["af_params_dir"] = "/content/bindstuff/params/"
+        advanced_settings["dssp_path"] = "/content/bindstuff/functions/dssp"
+        advanced_settings["dalphaball_path"] = "/content/bindstuff/functions/DAlphaBall.gcc"
     else:
         # Set paths individually if they are not already set
         if not advanced_settings["af_params_dir"]:
-            advanced_settings["af_params_dir"] = bindcraft_folder
+            advanced_settings["af_params_dir"] = bindstuff_folder
         if not advanced_settings["dssp_path"]:
             advanced_settings["dssp_path"] = os.path.join(
-                bindcraft_folder, "functions", "dssp"
+                bindstuff_folder, "functions", "dssp"
             )
         if not advanced_settings["dalphaball_path"]:
             advanced_settings["dalphaball_path"] = os.path.join(
-                bindcraft_folder, "functions", "DAlphaBall.gcc"
+                bindstuff_folder, "functions", "DAlphaBall.gcc"
             )
 
     # check formatting of omit_AAs setting
@@ -591,3 +591,82 @@ def check_filters(mpnn_data: List[Any], design_labels: List[str], filters: Dict[
     if len(unmet_conditions) == 0:
         return True
     return unmet_conditions
+
+def create_target_settings_from_form(design_path, binder_name, starting_pdb, chains, target_hotspot_residues, lengths, number_of_final_designs, load_previous_target_settings):
+    """Creates a target settings dictionary from form inputs."""
+    if load_previous_target_settings:
+        return load_previous_target_settings
+
+    lengths = [int(x.strip()) for x in lengths.split(',') if len(lengths.split(',')) == 2]
+    if len(lengths) != 2:
+        raise ValueError("Incorrect specification of binder lengths.")
+
+    settings = {
+        "design_path": design_path,
+        "binder_name": binder_name,
+        "starting_pdb": starting_pdb,
+        "chains": chains,
+        "target_hotspot_residues": target_hotspot_residues,
+        "lengths": lengths,
+        "number_of_final_designs": number_of_final_designs
+    }
+
+    target_settings_path = os.path.join(design_path, binder_name + ".json")
+    os.makedirs(design_path, exist_ok=True)
+
+    with open(target_settings_path, 'w') as f:
+        json.dump(settings, f, indent=4)
+
+    return target_settings_path
+
+def get_advanced_settings_path_from_form(design_protocol, interface_protocol, template_protocol, prediction_protocol):
+    """Gets the advanced settings path from form inputs."""
+    if design_protocol == "Default":
+        design_protocol_tag = "default_4stage_multimer"
+    elif design_protocol == "Beta-sheet":
+        design_protocol_tag = "betasheet_4stage_multimer"
+    elif design_protocol == "Peptide":
+        design_protocol_tag = "peptide_3stage_multimer"
+    else:
+        raise ValueError("Unsupported design protocol")
+
+    if interface_protocol == "AlphaFold2":
+        interface_protocol_tag = ""
+    elif interface_protocol == "MPNN":
+        interface_protocol_tag = "_mpnn"
+    else:
+        raise ValueError("Unsupported interface protocol")
+
+    if template_protocol == "Default":
+        template_protocol_tag = ""
+    elif template_protocol == "Masked":
+        template_protocol_tag = "_flexible"
+    else:
+        raise ValueError("Unsupported template protocol")
+
+    if design_protocol in ["Peptide"]:
+        prediction_protocol_tag = ""
+    else:
+        if prediction_protocol == "Default":
+            prediction_protocol_tag = ""
+        elif prediction_protocol == "HardTarget":
+            prediction_protocol_tag = "_hardtarget"
+        else:
+            raise ValueError("Unsupported prediction protocol")
+
+    return "/content/bindstuff/settings_advanced/" + design_protocol_tag + interface_protocol_tag + template_protocol_tag + prediction_protocol_tag + ".json"
+
+def get_filter_settings_path_from_form(filter_option):
+    """Gets the filter settings path from form inputs."""
+    if filter_option == "Default":
+        return "/content/bindstuff/settings_filters/default_filters.json"
+    elif filter_option == "Peptide":
+        return "/content/bindstuff/settings_filters/peptide_filters.json"
+    elif filter_option == "Relaxed":
+        return "/content/bindstuff/settings_filters/relaxed_filters.json"
+    elif filter_option == "Peptide_Relaxed":
+        return "/content/bindstuff/settings_filters/peptide_relaxed_filters.json"
+    elif filter_option == "None":
+        return "/content/bindstuff/settings_filters/no_filters.json"
+    else:
+        raise ValueError("Unsupported filter type")
