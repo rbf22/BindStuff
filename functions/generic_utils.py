@@ -343,6 +343,11 @@ def load_helicity(advanced_settings: Dict[str, Any]) -> float:
     return float(helicity_value)
 
 # Report JAX-capable devices
+def is_gpu_available() -> bool:
+    """Check if JAX GPU is available."""
+    return any(device.platform == "gpu" for device in jax.devices())
+
+
 def check_jax_gpu() -> None:
     """Check if JAX GPU is available."""
     devices = jax.devices()
