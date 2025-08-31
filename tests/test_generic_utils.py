@@ -2,9 +2,11 @@
 import os
 import json
 import tempfile
+import zipfile
 from unittest.mock import patch, MagicMock
 
 import pandas as pd
+import numpy as np
 
 from functions import generic_utils
 
@@ -34,11 +36,12 @@ def test_generate_filter_pass_csv():
         failure_csv = os.path.join(tmpdir, "failures.csv")
         filter_json = os.path.join(tmpdir, "filters.json")
         with open(filter_json, "w", encoding="utf-8") as f:
-            json.dump({"1_pLDDT": {"threshold": 0.7}}, f)
+            json.dump({"1_pLDDT": {"threshold": 0.7}, "InterfaceAAs": {}}, f)
         generic_utils.generate_filter_pass_csv(failure_csv, filter_json)
         assert os.path.exists(failure_csv)
         df = pd.read_csv(failure_csv)
         assert "pLDDT" in df.columns
+        assert "InterfaceAAs_A" in df.columns
 
 def test_update_failures():
     """Test the update_failures function."""
@@ -52,6 +55,13 @@ def test_update_failures():
         generic_utils.update_failures(failure_csv, {"col2": 2})
         df = pd.read_csv(failure_csv)
         assert df["col2"][0] == 2
+        generic_utils.update_failures(failure_csv, "1_col3")
+        df = pd.read_csv(failure_csv)
+        assert df["col3"][0] == 1
+        generic_utils.update_failures(failure_csv, {"2_col4": 3})
+        df = pd.read_csv(failure_csv)
+        assert df["col4"][0] == 3
+
 
 def test_check_n_trajectories():
     """Test the check_n_trajectories function."""
@@ -64,6 +74,39 @@ def test_check_n_trajectories():
         with open(os.path.join(tmpdir, "file2.pdb"), "w", encoding="utf-8") as f:
             f.write("")
         assert generic_utils.check_n_trajectories(design_paths, advanced_settings)
+        advanced_settings = {"max_trajectories": False}
+        assert not generic_utils.check_n_trajectories(design_paths, advanced_settings)
+
+def test_check_accepted_designs():
+    """Test the check_accepted_designs function."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        design_paths = generic_utils.generate_directories(tmpdir)
+        mpnn_csv = os.path.join(tmpdir, "mpnn.csv")
+        final_csv = os.path.join(tmpdir, "final.csv")
+        _, design_labels, final_labels = generic_utils.generate_dataframe_labels()
+
+        # Create dummy files and data
+        pd.DataFrame(columns=design_labels).to_csv(mpnn_csv, index=False)
+        pd.DataFrame(columns=final_labels).to_csv(final_csv, index=False)
+
+        advanced_settings = {"zip_animations": True, "zip_plots": True}
+        target_settings = {"number_of_final_designs": 1, "binder_name": "test_binder"}
+
+        # Case 1: Not enough accepted designs
+        assert not generic_utils.check_accepted_designs(design_paths, mpnn_csv, final_labels, final_csv, advanced_settings, target_settings, design_labels)
+
+        # Create an accepted design
+        open(os.path.join(design_paths["Accepted"], "test_binder_model1.pdb"), 'w').close()
+
+        # Add data to mpnn_csv
+        mpnn_df = pd.DataFrame([{"Design": "test_binder", "Average_i_pTM": 0.8}], columns=design_labels)
+        mpnn_df.to_csv(mpnn_csv, index=False)
+
+        # Case 2: Enough accepted designs
+        assert generic_utils.check_accepted_designs(design_paths, mpnn_csv, final_labels, final_csv, advanced_settings, target_settings, design_labels)
+
+        # Verify ranked file exists
+        assert os.path.exists(os.path.join(design_paths["Accepted/Ranked"], "1_test_binder_model1.pdb"))
 
 def test_load_helicity():
     """Test the load_helicity function."""
@@ -71,6 +114,8 @@ def test_load_helicity():
     assert generic_utils.load_helicity(adv_set) == 0.5
     adv_set = {"random_helicity": True, "weights_helicity": 0}
     assert isinstance(generic_utils.load_helicity(adv_set), float)
+    adv_set = {"random_helicity": False, "weights_helicity": 0}
+    assert generic_utils.load_helicity(adv_set) == 0
 
 @patch("jax.devices")
 def test_check_jax_gpu(mock_devices):
@@ -79,6 +124,12 @@ def test_check_jax_gpu(mock_devices):
     with patch("builtins.print") as mock_print:
         generic_utils.check_jax_gpu()
         mock_print.assert_any_call("Available GPUs:")
+
+    mock_devices.return_value = [MagicMock(platform="cpu")]
+    with patch('sys.exit') as mock_exit:
+        generic_utils.check_jax_gpu()
+        mock_exit.assert_called_once_with(1)
+
 
 def test_perform_input_check():
     """Test the perform_input_check function."""
@@ -90,15 +141,47 @@ def test_perform_input_check():
     assert f is not None
     assert a is not None
 
+    with patch('sys.exit') as mock_exit:
+        args.settings = None
+        generic_utils.perform_input_check(args)
+        mock_exit.assert_called_once_with(1)
+
 def test_perform_advanced_settings_check():
     """Test the perform_advanced_settings_check function."""
     adv_set = {
         "af_params_dir": None, "dssp_path": None,
         "dalphaball_path": None, "omit_AAs": " C "
     }
-    adv_set = generic_utils.perform_advanced_settings_check(adv_set, "test_folder")
-    assert adv_set["af_params_dir"] == "test_folder"
-    assert adv_set["omit_AAs"] == "C"
+    adv_set_colab = generic_utils.perform_advanced_settings_check(adv_set, "colab")
+    assert adv_set_colab["af_params_dir"]
+
+    adv_set = {
+        "af_params_dir": "", "dssp_path": "",
+        "dalphaball_path": "", "omit_AAs": False
+    }
+
+    adv_set_local = generic_utils.perform_advanced_settings_check(adv_set, "test_folder")
+    assert adv_set_local["af_params_dir"] == "test_folder"
+    assert adv_set_local["omit_AAs"] is None
+
+def test_load_json_settings():
+    """Test load_json_settings."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        settings_file = os.path.join(tmpdir, "settings.json")
+        filters_file = os.path.join(tmpdir, "filters.json")
+        advanced_file = os.path.join(tmpdir, "advanced.json")
+
+        with open(settings_file, "w") as f:
+            json.dump({"a": 1}, f)
+        with open(filters_file, "w") as f:
+            json.dump({"b": 2}, f)
+        with open(advanced_file, "w") as f:
+            json.dump({"c": 3}, f)
+
+        s, a, f = generic_utils.load_json_settings(settings_file, filters_file, advanced_file)
+        assert s == {"a": 1}
+        assert f == {"b": 2}
+        assert a == {"c": 3}
 
 def test_load_af2_models():
     """Test the load_af2_models function."""
@@ -161,18 +244,59 @@ def test_clean_pdb():
             assert lines[0].startswith("ATOM")
             assert lines[1].startswith("HETATM")
 
+def test_zip_and_empty_folder():
+    """Test the zip_and_empty_folder function."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        folder_to_zip = os.path.join(tmpdir, "test_folder")
+        os.makedirs(folder_to_zip)
+        file_to_zip = os.path.join(folder_to_zip, "test.txt")
+        with open(file_to_zip, "w") as f:
+            f.write("test")
+
+        generic_utils.zip_and_empty_folder(folder_to_zip, ".txt")
+
+        zip_path = os.path.join(tmpdir, "test_folder.zip")
+        assert os.path.exists(zip_path)
+        assert not os.path.exists(file_to_zip)
+
+        with zipfile.ZipFile(zip_path, 'r') as zf:
+            assert "test.txt" in zf.namelist()
+
+
 def test_calculate_averages():
     """Test the calculate_averages function."""
-    stats = {1: {"a": 1, "b": 2}, 2: {"a": 3, "b": 4}}
-    averages = generic_utils.calculate_averages(stats)
+    stats = {1: {"a": 1, "b": 2, "InterfaceAAs": {"A": 1}}, 2: {"a": 3, "b": 4, "InterfaceAAs": {"C": 1}}}
+    averages = generic_utils.calculate_averages(stats, handle_aa=True)
     assert averages["a"] == 2.0
     assert averages["b"] == 3.0
+    assert averages["InterfaceAAs"] > 0
+
+    stats_with_none = {1: {"a": 1, "b": None}, 2: {"a": 3, "b": 4}}
+    averages = generic_utils.calculate_averages(stats_with_none)
+    assert averages['b'] == 2.0
+
 
 def test_check_filters():
     """Test the check_filters function."""
-    data = [1, 2, 3]
-    labels = ["a", "b", "c"]
+    data = [1, 2, 3, {"A": 1}]
+    labels = ["a", "b", "c", "Average_InterfaceAAs"]
     filters = {"a": {"threshold": 0, "higher": True}}
     assert generic_utils.check_filters(data, labels, filters)
+
     filters = {"a": {"threshold": 2, "higher": True}}
-    assert isinstance(generic_utils.check_filters(data, labels, filters), list)
+    assert "a" in generic_utils.check_filters(data, labels, filters)
+
+    filters = {"a": {"threshold": 0, "higher": False}}
+    assert "a" in generic_utils.check_filters(data, labels, filters)
+
+    filters = {"d": {"threshold": 0, "higher": True}} # label not in data
+    assert generic_utils.check_filters(data, labels, filters)
+
+    filters = {"Average_InterfaceAAs": {"A": {"threshold": 0, "higher": True}}}
+    assert generic_utils.check_filters(data, labels, filters)
+
+    filters = {"Average_InterfaceAAs": {"A": {"threshold": 2, "higher": True}}}
+    assert "Average_InterfaceAAs_A" in generic_utils.check_filters(data, labels, filters)
+
+    filters = {"Average_InterfaceAAs": {"A": {"threshold": 0, "higher": False}}}
+    assert "Average_InterfaceAAs_A" in generic_utils.check_filters(data, labels, filters)
