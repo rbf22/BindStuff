@@ -12,7 +12,7 @@ dev-install:
 download-params:
 	@echo "Downloading AlphaFold2 parameters..."
 	mkdir -p params
-	wget -O params/alphafold_params_2022-12-06.tar "https://storage.googleapis.com/alphafold/alphafold_params_2022-12-06.tar"
+	wget -q -O params/alphafold_params_2022-12-06.tar "https://storage.googleapis.com/alphafold/alphafold_params_2022-12-06.tar"
 	tar -xvf params/alphafold_params_2022-12-06.tar -C params
 	rm params/alphafold_params_2022-12-06.tar
 
