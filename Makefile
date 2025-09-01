@@ -1,4 +1,4 @@
-.PHONY: install dev-install download-params install-system-deps run-tests run-linter run-linter-fix run-pylint run-mypy run-deptry
+.PHONY: install dev-install download-params install-system-deps run-tests run-example run-linter run-linter-fix run-pylint run-mypy run-deptry
 
 install: install-system-deps dev-install download-params
 	@echo "Installation complete. Please activate your poetry shell with 'poetry shell'"
@@ -21,6 +21,9 @@ install-system-deps:
 
 run-tests:
 	JAX_PLATFORM_NAME=cpu poetry run pytest --cov=functions --cov-report=term-missing
+
+run-example:
+    JAX_PLATFORM_NAME=cpu poetry run python examples/run_example.py --run-on-cpu
 
 run-linter:
 	poetry run ruff check .
