@@ -19,7 +19,7 @@ Note: This install script will install PyRosetta, which requires a license for c
 `bash install_BindStuff.sh --cuda '12.4' --pkg_manager 'conda'`
 
 ## Google Colab
-<a href="https://colab.research.google.com/github/martinpacesa/BindStuff/blob/main/notebooks/BindStuff.ipynb">
+<a href="https://colab.research.google.com/github/rbf22/BindStuff/blob/main/example/run_example.py">
   <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
 </a> <br />
 We prepared a convenient google colab notebook to test the BindStuff code functionalities. However, as the pipeline requires significant amount of GPU memory to run for larger target+binder complexes, we highly recommend to run it using a local installation and at least 32 Gb of GPU memory.
