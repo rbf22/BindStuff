@@ -24,7 +24,7 @@ colabdesign = {git = "https://github.com/sokrypton/ColabDesign.git"}
 biopython = "1.85"
 pytest = "^8.4.1"
 absl-py = "^2.0.0"
-dm-haiku = "0.0.12"
+dm-haiku = "0.0.14"
 tensorflow = "2.20.0"
 dm-tree = "^0.1.8"
 freesasa = "^2.1.0"
